@@ -11,10 +11,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!mobile || !password) {
+    if (!mobile.trim() || !password.trim()) {
       alert("Please enter mobile number and password.");
       return;
     }
@@ -22,39 +22,33 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await fetch(
-        "http://localhost:5000/api/login",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            mobile,
-            password,
-          }),
-        }
-      );
+      const response = await fetch("http://localhost:5000/api/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          mobile: mobile.trim(),
+          password,
+        }),
+      });
 
       const text = await response.text();
 
-      let data;
+      let data: any;
 
       try {
         data = JSON.parse(text);
       } catch {
         throw new Error(
-          `Server returned invalid response. Status: ${response.status}`
+          `Server returned an invalid response. Status: ${response.status}`
         );
       }
 
       if (!response.ok || !data.success) {
-        throw new Error(
-          data.message || "Login failed"
-        );
+        throw new Error(data.message || "Login failed.");
       }
 
-      // Save customer information
       if (data.customer) {
         if (data.customer.customer_id) {
           localStorage.setItem(
@@ -81,13 +75,11 @@ export default function LoginPage() {
       alert("✅ Login successful!");
 
       router.push("/marketplace");
-
     } catch (error: any) {
-      console.error("❌ Login Error:", error);
+      console.error("Login Error:", error);
 
       alert(
-        error.message ||
-          "Something went wrong while logging in."
+        error?.message || "Something went wrong while logging in."
       );
     } finally {
       setLoading(false);
@@ -96,192 +88,104 @@ export default function LoginPage() {
 
   return (
     <main className="login-page">
-
-      {/* BACK TO HOME */}
-
-      <Link
-        href="/"
-        className="login-back-home"
-      >
+      <Link href="/" className="login-back-home">
         ← Back to Home
       </Link>
 
-
-      {/* HEADER */}
-
       <header className="login-header">
-
-        <Link
-          href="/"
-          className="login-logo"
-        >
-          🌱 FarmDirect
+        <Link href="/" className="login-logo">
+          🌱 SmartAgri
         </Link>
 
-        <div className="login-header-icon">
-          🔐
-        </div>
-
+        <div className="login-header-icon">🔐</div>
       </header>
 
-
-      {/* LOGIN CARD */}
-
       <section className="login-wrapper">
-
         <div className="login-card">
-
-          {/* ICON */}
-
-          <div className="login-icon">
-            🔐
-          </div>
-
-
-          {/* TITLE */}
+          <div className="login-icon">🔐</div>
 
           <div className="login-title">
+            <p>WELCOME BACK</p>
 
-            <p>
-              WELCOME BACK
-            </p>
-
-            <h1>
-              Welcome Back
-            </h1>
+            <h1>Welcome Back</h1>
 
             <span>
-              Login to your FarmDirect account.
+              Login to your SmartAgri account.
             </span>
-
           </div>
 
-
-          {/* FORM */}
-
-          <form
-            onSubmit={handleLogin}
-            className="login-form"
-          >
-
-            {/* MOBILE */}
-
+          <form onSubmit={handleLogin} className="login-form">
             <div className="login-field">
-
-              <label>
+              <label htmlFor="mobile">
                 Mobile Number
               </label>
 
               <div className="login-input-wrapper">
-
-                <span>
-                  📱
-                </span>
+                <span>📱</span>
 
                 <input
+                  id="mobile"
                   type="tel"
                   value={mobile}
-                  onChange={(e) =>
-                    setMobile(e.target.value)
-                  }
+                  onChange={(e) => setMobile(e.target.value)}
                   placeholder="Enter mobile number"
                   maxLength={10}
                   required
                 />
-
               </div>
-
             </div>
 
-
-            {/* PASSWORD */}
-
             <div className="login-field">
-
-              <label>
+              <label htmlFor="password">
                 Password
               </label>
 
               <div className="login-input-wrapper">
-
-                <span>
-                  🔒
-                </span>
+                <span>🔒</span>
 
                 <input
+                  id="password"
                   type="password"
                   value={password}
-                  onChange={(e) =>
-                    setPassword(e.target.value)
-                  }
+                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter password"
                   required
                 />
-
               </div>
-
             </div>
-
-
-            {/* FORGOT PASSWORD */}
 
             <div className="login-options">
-
-              <Link href="/login#">
+              <Link href="/login">
                 Forgot Password?
               </Link>
-
             </div>
-
-
-            {/* LOGIN BUTTON */}
 
             <button
               type="submit"
               disabled={loading}
               className="login-button"
             >
-
-              {loading
-                ? "⏳ Logging in..."
-                : "Login →"}
-
+              {loading ? "⏳ Logging in..." : "Login →"}
             </button>
-
           </form>
 
-
-          {/* REGISTER */}
-
           <div className="login-register">
+            <span>Don't have an account?</span>
 
-            <span>
-              Don't have an account?
-            </span>
-
-            <Link href="/register">
+            <Link href="/register/customer">
               Create Account
             </Link>
-
           </div>
-
         </div>
 
-
-        {/* TRUST */}
-
         <div className="login-trust">
-
           <span>🌱</span>
 
           <p>
             Fresh products directly from local farmers
           </p>
-
         </div>
-
       </section>
-
     </main>
   );
 }

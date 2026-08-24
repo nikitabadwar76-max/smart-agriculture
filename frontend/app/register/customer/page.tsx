@@ -1,24 +1,24 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { FormEvent, useState } from "react";
+
+const API_URL = "http://localhost:5000/api/customers/register";
 
 export default function CustomerRegisterPage() {
-  const router = useRouter();
-
   const [form, setForm] = useState({
-    name: "",
-    email: "",
+    customer_name: "",
     mobile: "",
     password: "",
-    address: "",
+    confirmPassword: "",
   });
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement>
   ) => {
     setForm({
       ...form,
@@ -26,227 +26,217 @@ export default function CustomerRegisterPage() {
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleRegister = async (
+    e: FormEvent<HTMLFormElement>
+  ) => {
     e.preventDefault();
 
     setMessage("");
+    setError("");
+
+    if (
+      !form.customer_name ||
+      !form.mobile ||
+      !form.password ||
+      !form.confirmPassword
+    ) {
+      setError("Please fill in all required fields.");
+      return;
+    }
+
+    if (form.mobile.length !== 10) {
+      setError("Please enter a valid 10-digit mobile number.");
+      return;
+    }
+
+    if (form.password.length < 6) {
+      setError("Password must contain at least 6 characters.");
+      return;
+    }
+
+    if (form.password !== form.confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:5000/api/customers/register", {
+      const response = await fetch(API_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          customer_name: form.customer_name.trim(),
+          mobile: form.mobile.trim(),
+          password: form.password,
+        }),
       });
 
-      const data = await response.json();
+      const text = await response.text();
 
-      if (!response.ok) {
-        setMessage(data.message || "Registration failed");
-        setLoading(false);
-        return;
+      let data: any;
+
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(
+          `Server returned an invalid response. Status: ${response.status}`
+        );
       }
 
-      setMessage("Registration successful! Redirecting to login...");
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.message || "Registration failed."
+        );
+      }
 
-      setTimeout(() => {
-        router.push("/login/customer");
-      }, 1200);
-    } catch (error) {
-      console.error(error);
-      setMessage("Server error. Please try again.");
+      setMessage(
+        "✅ Account created successfully! You can now login."
+      );
+
+      setForm({
+        customer_name: "",
+        mobile: "",
+        password: "",
+        confirmPassword: "",
+      });
+    } catch (error: any) {
+      console.error("Registration Error:", error);
+
+      setError(
+        error?.message ||
+          "Unable to connect to the server."
+      );
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
     <main className="customer-register-page">
-      
-      {/* LEFT SIDE */}
-      <section className="customer-register-visual">
-        <div className="customer-overlay"></div>
+      <div className="customer-register-card">
+        <Link
+          href="/login"
+          className="back-login"
+        >
+          ← Back to Login
+        </Link>
 
-        <div className="customer-visual-content">
-          <div className="customer-brand">
-            🌱 <span>Smart</span>Agri
-          </div>
-
-          <div>
-            <p className="customer-small-title">
-              FRESH • LOCAL • DIRECT
-            </p>
-
-            <h1>
-              Fresh food,
-              <br />
-              <span>straight from farms.</span>
-            </h1>
-
-            <p className="customer-visual-text">
-              Connect directly with local farmers and enjoy
-              fresh vegetables and fruits delivered to you.
-            </p>
-
-            <div className="customer-points">
-              <div>
-                <span>✓</span>
-                Fresh farm products
-              </div>
-
-              <div>
-                <span>✓</span>
-                Direct from farmers
-              </div>
-
-              <div>
-                <span>✓</span>
-                Trusted & simple shopping
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* RIGHT SIDE */}
-      <section className="customer-register-form-section">
-
-        <div className="customer-register-card">
-
-          <div className="customer-form-header">
-            <div className="customer-icon">
-              👤
-            </div>
-
-            <p className="customer-form-label">
-              CUSTOMER ACCOUNT
-            </p>
-
-            <h2>Create your account</h2>
-
-            <p>
-              Join SmartAgri and start shopping fresh products.
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit}>
-
-            <div className="customer-form-row">
-
-              <div className="customer-input-group">
-                <label>Full Name</label>
-
-                <input
-                  type="text"
-                  name="name"
-                  placeholder="Enter your full name"
-                  value={form.name}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-
-              <div className="customer-input-group">
-                <label>Mobile Number</label>
-
-                <input
-                  type="tel"
-                  name="mobile"
-                  placeholder="Enter mobile number"
-                  value={form.mobile}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-
-            </div>
-
-            <div className="customer-input-group">
-              <label>Email Address</label>
-
-              <input
-                type="email"
-                name="email"
-                placeholder="Enter your email"
-                value={form.email}
-                onChange={handleChange}
-                required
-              />
-            </div>
-
-            <div className="customer-input-group">
-              <label>Password</label>
-
-              <input
-                type="password"
-                name="password"
-                placeholder="Create a password"
-                value={form.password}
-                onChange={handleChange}
-                required
-              />
-            </div>
-
-            <div className="customer-input-group">
-              <label>Delivery Address</label>
-
-              <textarea
-                name="address"
-                placeholder="Enter your complete delivery address"
-                value={form.address}
-                onChange={handleChange}
-                rows={3}
-                required
-              />
-            </div>
-
-            {message && (
-              <div
-                className={
-                  message.toLowerCase().includes("successful")
-                    ? "customer-message success"
-                    : "customer-message error"
-                }
-              >
-                {message}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              className="customer-register-submit"
-              disabled={loading}
-            >
-              {loading ? "Creating Account..." : "Create Customer Account →"}
-            </button>
-
-          </form>
-
-          <div className="customer-login-link">
-            Already have an account?
-            <button
-              type="button"
-              onClick={() => router.push("/login/customer")}
-            >
-              Login
-            </button>
-          </div>
-
-          <div className="customer-back-home">
-            <button
-              type="button"
-              onClick={() => router.push("/")}
-            >
-              ← Back to SmartAgri
-            </button>
-          </div>
-
+        <div className="customer-logo">
+          🌱
         </div>
 
-      </section>
+        <div className="customer-header">
+          <span>SMARTAGRI</span>
 
+          <h1>Create Account</h1>
+
+          <p>
+            Join SmartAgri and shop fresh products
+            directly from local farmers.
+          </p>
+        </div>
+
+        {error && (
+          <div className="customer-error">
+            ⚠️ {error}
+          </div>
+        )}
+
+        {message && (
+          <div className="customer-success">
+            {message}
+          </div>
+        )}
+
+        <form onSubmit={handleRegister}>
+          <div className="customer-field">
+            <label htmlFor="customer_name">
+              Full Name *
+            </label>
+
+            <input
+              id="customer_name"
+              name="customer_name"
+              type="text"
+              value={form.customer_name}
+              onChange={handleChange}
+              placeholder="Enter your full name"
+              required
+            />
+          </div>
+
+          <div className="customer-field">
+            <label htmlFor="mobile">
+              Mobile Number *
+            </label>
+
+            <input
+              id="mobile"
+              name="mobile"
+              type="tel"
+              value={form.mobile}
+              onChange={handleChange}
+              placeholder="Enter 10-digit mobile number"
+              maxLength={10}
+              required
+            />
+          </div>
+
+          <div className="customer-field">
+            <label htmlFor="password">
+              Password *
+            </label>
+
+            <input
+              id="password"
+              name="password"
+              type="password"
+              value={form.password}
+              onChange={handleChange}
+              placeholder="Create password"
+              minLength={6}
+              required
+            />
+          </div>
+
+          <div className="customer-field">
+            <label htmlFor="confirmPassword">
+              Confirm Password *
+            </label>
+
+            <input
+              id="confirmPassword"
+              name="confirmPassword"
+              type="password"
+              value={form.confirmPassword}
+              onChange={handleChange}
+              placeholder="Confirm password"
+              minLength={6}
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="customer-register-button"
+          >
+            {loading
+              ? "Creating Account..."
+              : "Create Account →"}
+          </button>
+        </form>
+
+        <div className="customer-login">
+          Already have an account?{" "}
+          <Link href="/login">
+            Login
+          </Link>
+        </div>
+      </div>
     </main>
   );
 }

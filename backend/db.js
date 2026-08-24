@@ -1,21 +1,31 @@
-const mysql = require("mysql2");
+const mysql = require("mysql2/promise");
 require("dotenv").config();
 
-const db = mysql.createConnection({
-    host: process.env.DB_HOST || "127.0.0.1",
+const pool = mysql.createPool({
+    host: process.env.DB_HOST || "localhost",
     user: process.env.DB_USER || "root",
     password: process.env.DB_PASSWORD || "",
     database: process.env.DB_NAME || "smart_agriculture",
-    port: Number(process.env.DB_PORT) || 3306
+    port: Number(process.env.DB_PORT || 3306),
+
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
 });
 
-db.connect((err) => {
-    if (err) {
-        console.error("❌ Database connection failed:", err.message);
-        return;
+async function testConnection() {
+    try {
+        const connection = await pool.getConnection();
+
+        console.log("✅ MySQL Database Connected Successfully");
+
+        connection.release();
+    } catch (error) {
+        console.error("❌ MySQL Database Connection Failed:");
+        console.error(error.message);
     }
+}
 
-    console.log("✅ MySQL Database Connected Successfully");
-});
+testConnection();
 
-module.exports = db;
+module.exports = pool;

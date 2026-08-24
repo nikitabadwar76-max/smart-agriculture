@@ -21,10 +21,6 @@ export default function AddProduct() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  // ==========================================
-  // HANDLE INPUT
-  // ==========================================
-
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
@@ -36,11 +32,7 @@ export default function AddProduct() {
     });
   };
 
-  // ==========================================
-  // SUBMIT PRODUCT
-  // ==========================================
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     setLoading(true);
@@ -52,26 +44,17 @@ export default function AddProduct() {
         "http://localhost:5000/api/products",
         {
           method: "POST",
-
           headers: {
             "Content-Type": "application/json",
           },
-
           body: JSON.stringify({
             farmer_id: 1,
-
             product_name: formData.product_name,
-
             category: formData.category,
-
             description: formData.description,
-
             price: Number(formData.price),
-
             unit: formData.unit,
-
             stock: Number(formData.stock),
-
             image_url: formData.image_url || null,
           }),
         }
@@ -85,9 +68,7 @@ export default function AddProduct() {
         );
       }
 
-      setMessage("✅ Product added successfully!");
-
-      // Clear form
+      setMessage("Product added successfully!");
 
       setFormData({
         product_name: "",
@@ -99,430 +80,537 @@ export default function AddProduct() {
         image_url: "",
       });
 
-      // Redirect after 1.5 seconds
-
       setTimeout(() => {
         router.push("/farmer/products");
       }, 1500);
-
-    } catch (err: any) {
-      console.error("❌ Add Product Error:", err);
+    } catch (err: unknown) {
+      console.error("Add Product Error:", err);
 
       setError(
-        err.message || "Something went wrong"
+        err instanceof Error
+          ? err.message
+          : "Something went wrong"
       );
-
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <main className="farmer-dashboard">
+    <main className="add-product-page">
 
-      {/* ==========================================
-          SIDEBAR
-      ========================================== */}
-
+      {/* SIDEBAR */}
       <aside className="farmer-sidebar">
 
         <div className="farmer-logo">
-          🌱 FarmDirect
+          <span className="logo-icon">🌱</span>
+          <span>SmartAgri</span>
         </div>
 
         <div className="farmer-profile">
-
           <div className="farmer-avatar">
             👨‍🌾
           </div>
 
           <h3>Farmer</h3>
-
           <p>Farm Owner</p>
-
         </div>
 
         <nav className="farmer-nav">
 
           <Link href="/farmer/dashboard">
-            🏠 Dashboard
+            <span>🏠</span>
+            Dashboard
           </Link>
 
           <Link
             href="/farmer/add-product"
             className="active"
           >
-            ➕ Add Product
+            <span>➕</span>
+            Add Product
           </Link>
 
           <Link href="/farmer/products">
-            🌾 My Products
+            <span>🌾</span>
+            My Products
           </Link>
 
           <Link href="/farmer/orders">
-            📦 Orders
+            <span>📦</span>
+            Orders
           </Link>
 
           <Link href="#">
-            👤 My Profile
+            <span>👤</span>
+            My Profile
           </Link>
 
         </nav>
 
         <Link href="/login" className="logout">
-          🚪 Logout
+          <span>🚪</span>
+          Logout
         </Link>
 
       </aside>
 
+      {/* MAIN CONTENT */}
+      <section className="add-product-content">
 
-      {/* ==========================================
-          MAIN CONTENT
-      ========================================== */}
-
-      <section className="dashboard-content">
-
-        <div className="dashboard-top">
+        {/* HEADER */}
+        <div className="add-product-header">
 
           <div>
+            <div className="breadcrumb">
+              Farmer Dashboard
+              <span>›</span>
+              Add Product
+            </div>
 
-            <p className="dashboard-label">
+            <p className="product-page-label">
               PRODUCT MANAGEMENT
             </p>
 
-            <h1>
-              Add New Product
-            </h1>
+            <h1>Add New Product</h1>
 
-            <p>
-              Add your fresh farm product to FarmDirect.
+            <p className="product-page-subtitle">
+              List your fresh farm products and connect
+              directly with customers.
             </p>
-
           </div>
 
           <Link
             href="/farmer/products"
-            className="add-product-btn"
+            className="back-products-btn"
           >
             ← My Products
           </Link>
 
         </div>
 
+        {/* CONTENT GRID */}
+        <div className="add-product-grid">
 
-        {/* ==========================================
-            FORM CARD
-        ========================================== */}
+          {/* FORM CARD */}
+          <div className="add-product-card">
 
-        <div className="products-table-card">
-
-          <form
-            onSubmit={handleSubmit}
-            style={{
-              padding: "30px",
-              maxWidth: "800px",
-            }}
-          >
-
-            {/* PRODUCT NAME */}
-
-            <div style={{ marginBottom: "20px" }}>
-
-              <label>
-                Product Name
-              </label>
-
-              <input
-                type="text"
-                name="product_name"
-                value={formData.product_name}
-                onChange={handleChange}
-                placeholder="Example: Fresh Tomato"
-                required
-                style={{
-                  width: "100%",
-                  padding: "12px",
-                  marginTop: "8px",
-                  border: "1px solid #ddd",
-                  borderRadius: "8px",
-                }}
-              />
-
-            </div>
-
-
-            {/* CATEGORY */}
-
-            <div style={{ marginBottom: "20px" }}>
-
-              <label>
-                Category
-              </label>
-
-              <select
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                style={{
-                  width: "100%",
-                  padding: "12px",
-                  marginTop: "8px",
-                  border: "1px solid #ddd",
-                  borderRadius: "8px",
-                }}
-              >
-
-                <option value="Vegetables">
-                  Vegetables
-                </option>
-
-                <option value="Fruits">
-                  Fruits
-                </option>
-
-                <option value="Grains">
-                  Grains
-                </option>
-
-                <option value="Dairy">
-                  Dairy
-                </option>
-
-                <option value="Other">
-                  Other
-                </option>
-
-              </select>
-
-            </div>
-
-
-            {/* DESCRIPTION */}
-
-            <div style={{ marginBottom: "20px" }}>
-
-              <label>
-                Description
-              </label>
-
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                placeholder="Describe your fresh farm product..."
-                rows={4}
-                style={{
-                  width: "100%",
-                  padding: "12px",
-                  marginTop: "8px",
-                  border: "1px solid #ddd",
-                  borderRadius: "8px",
-                  resize: "vertical",
-                }}
-              />
-
-            </div>
-
-
-            {/* PRICE + UNIT */}
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns:
-                  "1fr 1fr",
-                gap: "20px",
-                marginBottom: "20px",
-              }}
-            >
+            <div className="form-card-header">
+              <div className="form-card-icon">
+                📦
+              </div>
 
               <div>
+                <h2>Product Information</h2>
+                <p>
+                  Enter details about your farm product
+                </p>
+              </div>
+            </div>
+
+            <form
+              onSubmit={handleSubmit}
+              className="add-product-form"
+            >
+
+              {/* PRODUCT NAME */}
+              <div className="form-field full-width">
 
                 <label>
-                  Price (₹)
+                  Product Name
+                  <span>*</span>
                 </label>
 
-                <input
-                  type="number"
-                  name="price"
-                  value={formData.price}
+                <div className="input-wrapper">
+                  <span className="input-icon">🌾</span>
+
+                  <input
+                    type="text"
+                    name="product_name"
+                    value={formData.product_name}
+                    onChange={handleChange}
+                    placeholder="Example: Fresh Tomato"
+                    required
+                  />
+                </div>
+
+              </div>
+
+              {/* CATEGORY */}
+              <div className="form-field">
+
+                <label>Category</label>
+
+                <div className="input-wrapper">
+                  <span className="input-icon">📂</span>
+
+                  <select
+                    name="category"
+                    value={formData.category}
+                    onChange={handleChange}
+                  >
+                    <option value="Vegetables">
+                      Vegetables
+                    </option>
+
+                    <option value="Fruits">
+                      Fruits
+                    </option>
+
+                    <option value="Grains">
+                      Grains
+                    </option>
+
+                    <option value="Dairy">
+                      Dairy
+                    </option>
+
+                    <option value="Pulses">
+                      Pulses
+                    </option>
+
+                    <option value="Organic">
+                      Organic
+                    </option>
+
+                    <option value="Other">
+                      Other
+                    </option>
+                  </select>
+                </div>
+
+              </div>
+
+              {/* PRICE */}
+              <div className="form-field">
+
+                <label>
+                  Price
+                  <span>*</span>
+                </label>
+
+                <div className="input-wrapper price-input">
+                  <span className="currency-symbol">
+                    ₹
+                  </span>
+
+                  <input
+                    type="number"
+                    name="price"
+                    value={formData.price}
+                    onChange={handleChange}
+                    placeholder="40"
+                    min="0"
+                    step="0.01"
+                    required
+                  />
+                </div>
+
+              </div>
+
+              {/* STOCK */}
+              <div className="form-field">
+
+                <label>
+                  Available Stock
+                  <span>*</span>
+                </label>
+
+                <div className="input-wrapper">
+
+                  <span className="input-icon">
+                    📊
+                  </span>
+
+                  <input
+                    type="number"
+                    name="stock"
+                    value={formData.stock}
+                    onChange={handleChange}
+                    placeholder="100"
+                    min="0"
+                    step="0.01"
+                    required
+                  />
+
+                </div>
+
+              </div>
+
+              {/* UNIT */}
+              <div className="form-field">
+
+                <label>Unit</label>
+
+                <div className="input-wrapper">
+
+                  <span className="input-icon">
+                    ⚖️
+                  </span>
+
+                  <select
+                    name="unit"
+                    value={formData.unit}
+                    onChange={handleChange}
+                  >
+                    <option value="kg">
+                      Kilogram (kg)
+                    </option>
+
+                    <option value="gram">
+                      Gram (g)
+                    </option>
+
+                    <option value="quintal">
+                      Quintal
+                    </option>
+
+                    <option value="piece">
+                      Piece
+                    </option>
+
+                    <option value="dozen">
+                      Dozen
+                    </option>
+
+                    <option value="liter">
+                      Litre
+                    </option>
+                  </select>
+
+                </div>
+
+              </div>
+
+              {/* IMAGE */}
+              <div className="form-field full-width">
+
+                <label>Product Image URL</label>
+
+                <div className="input-wrapper">
+
+                  <span className="input-icon">
+                    🖼️
+                  </span>
+
+                  <input
+                    type="url"
+                    name="image_url"
+                    value={formData.image_url}
+                    onChange={handleChange}
+                    placeholder="https://example.com/tomato.jpg"
+                  />
+
+                </div>
+
+                <small>
+                  Use a clear image URL showing your
+                  product.
+                </small>
+
+              </div>
+
+              {/* DESCRIPTION */}
+              <div className="form-field full-width">
+
+                <label>Description</label>
+
+                <textarea
+                  name="description"
+                  value={formData.description}
                   onChange={handleChange}
-                  placeholder="40"
-                  min="0"
-                  step="0.01"
-                  required
-                  style={{
-                    width: "100%",
-                    padding: "12px",
-                    marginTop: "8px",
-                    border: "1px solid #ddd",
-                    borderRadius: "8px",
-                  }}
+                  placeholder="Describe your fresh farm product, quality, harvesting details..."
+                  rows={5}
                 />
 
+                <small>
+                  A good description helps customers
+                  understand your product.
+                </small>
+
               </div>
 
+              {/* MESSAGE */}
+              {message && (
+                <div className="product-success">
+                  <span>✓</span>
+                  <div>
+                    <strong>Success!</strong>
+                    <p>{message}</p>
+                  </div>
+                </div>
+              )}
+
+              {error && (
+                <div className="product-error">
+                  <span>!</span>
+                  <div>
+                    <strong>Unable to add product</strong>
+                    <p>{error}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* BUTTONS */}
+              <div className="form-actions">
+
+                <Link
+                  href="/farmer/products"
+                  className="cancel-btn"
+                >
+                  Cancel
+                </Link>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="save-product-btn"
+                >
+                  {loading ? (
+                    <>
+                      <span className="spinner"></span>
+                      Adding Product...
+                    </>
+                  ) : (
+                    <>
+                      🌱 Add Product
+                    </>
+                  )}
+                </button>
+
+              </div>
+
+            </form>
+
+          </div>
+
+          {/* PREVIEW */}
+          <div className="product-preview-area">
+
+            <div className="preview-card">
+
+              <div className="preview-header">
+                <div>
+                  <span className="preview-label">
+                    LIVE PREVIEW
+                  </span>
+
+                  <h2>Your Product</h2>
+                </div>
+
+                <span className="preview-eye">
+                  👁️
+                </span>
+              </div>
+
+              <div className="preview-image-container">
+
+                {formData.image_url ? (
+                  <img
+                    src={formData.image_url}
+                    alt={
+                      formData.product_name ||
+                      "Product preview"
+                    }
+                  />
+                ) : (
+                  <div className="preview-placeholder">
+                    <div>🌱</div>
+                    <p>Product Image</p>
+                    <span>
+                      Add an image URL to preview
+                    </span>
+                  </div>
+                )}
+
+              </div>
+
+              <div className="preview-details">
+
+                <span className="preview-category">
+                  {formData.category}
+                </span>
+
+                <h3>
+                  {formData.product_name ||
+                    "Fresh Farm Product"}
+                </h3>
+
+                <p>
+                  {formData.description ||
+                    "Your product description will appear here."}
+                </p>
+
+                <div className="preview-price-row">
+
+                  <div className="preview-price">
+                    ₹{formData.price || "0"}
+                    <span>
+                      / {formData.unit}
+                    </span>
+                  </div>
+
+                  <div className="preview-stock">
+                    <span>Stock</span>
+                    <strong>
+                      {formData.stock || "0"}{" "}
+                      {formData.unit}
+                    </strong>
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+
+            {/* FARMER TIP */}
+            <div className="farmer-tip-card">
+
+              <div className="tip-icon">
+                💡
+              </div>
 
               <div>
+                <h3>Farmer Tip</h3>
 
-                <label>
-                  Unit
-                </label>
-
-                <select
-                  name="unit"
-                  value={formData.unit}
-                  onChange={handleChange}
-                  style={{
-                    width: "100%",
-                    padding: "12px",
-                    marginTop: "8px",
-                    border: "1px solid #ddd",
-                    borderRadius: "8px",
-                  }}
-                >
-
-                  <option value="kg">
-                    Kilogram (kg)
-                  </option>
-
-                  <option value="gram">
-                    Gram
-                  </option>
-
-                  <option value="piece">
-                    Piece
-                  </option>
-
-                  <option value="dozen">
-                    Dozen
-                  </option>
-
-                  <option value="liter">
-                    Liter
-                  </option>
-
-                </select>
-
+                <p>
+                  Use a bright and clear product image,
+                  accurate pricing and fresh stock
+                  information to attract more customers.
+                </p>
               </div>
 
             </div>
 
+            {/* PRODUCT CHECKLIST */}
+            <div className="product-check-card">
 
-            {/* STOCK */}
+              <h3>Before publishing</h3>
 
-            <div style={{ marginBottom: "20px" }}>
+              <div className="check-item">
+                <span>✓</span>
+                Add a clear product name
+              </div>
 
-              <label>
-                Available Stock
-              </label>
+              <div className="check-item">
+                <span>✓</span>
+                Set the correct price
+              </div>
 
-              <input
-                type="number"
-                name="stock"
-                value={formData.stock}
-                onChange={handleChange}
-                placeholder="100"
-                min="0"
-                step="0.01"
-                required
-                style={{
-                  width: "100%",
-                  padding: "12px",
-                  marginTop: "8px",
-                  border: "1px solid #ddd",
-                  borderRadius: "8px",
-                }}
-              />
+              <div className="check-item">
+                <span>✓</span>
+                Enter available stock
+              </div>
+
+              <div className="check-item">
+                <span>✓</span>
+                Add a quality image
+              </div>
 
             </div>
 
-
-            {/* IMAGE */}
-
-            <div style={{ marginBottom: "20px" }}>
-
-              <label>
-                Product Image URL
-              </label>
-
-              <input
-                type="url"
-                name="image_url"
-                value={formData.image_url}
-                onChange={handleChange}
-                placeholder="https://example.com/tomato.jpg"
-                style={{
-                  width: "100%",
-                  padding: "12px",
-                  marginTop: "8px",
-                  border: "1px solid #ddd",
-                  borderRadius: "8px",
-                }}
-              />
-
-            </div>
-
-
-            {/* SUCCESS */}
-
-            {message && (
-
-              <div
-                style={{
-                  padding: "12px",
-                  marginBottom: "20px",
-                  background: "#ecfdf5",
-                  color: "#047857",
-                  borderRadius: "8px",
-                }}
-              >
-                {message}
-              </div>
-
-            )}
-
-
-            {/* ERROR */}
-
-            {error && (
-
-              <div
-                style={{
-                  padding: "12px",
-                  marginBottom: "20px",
-                  background: "#fef2f2",
-                  color: "#dc2626",
-                  borderRadius: "8px",
-                }}
-              >
-                ❌ {error}
-              </div>
-
-            )}
-
-
-            {/* SUBMIT */}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="add-product-btn"
-              style={{
-                border: "none",
-                cursor: loading
-                  ? "not-allowed"
-                  : "pointer",
-              }}
-            >
-
-              {loading
-                ? "Adding Product..."
-                : "🌱 Add Product"}
-
-            </button>
-
-          </form>
+          </div>
 
         </div>
 

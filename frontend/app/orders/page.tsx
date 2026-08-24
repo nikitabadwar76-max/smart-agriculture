@@ -1,78 +1,106 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 
-type OrderItem = {
-  id: number;
-  name: string;
-  price: number;
-  unit: string;
-  quantity: number;
-  farmer: string;
-};
+const orders = [
+  {
+    id: "ORD1003",
+    date: "22 Aug 2026 • 10:30 AM",
+    status: "Completed",
+    statusClass: "completed",
+    payment: "Cash on Delivery",
+    items: "3 Products",
+    delivery: "Delivered",
+    total: 305,
+    button: "View Order Details →",
+    products: [
+      {
+        name: "Fresh Tomatoes",
+        quantity: "2 kg × ₹40",
+        price: 80,
+        image:
+          "https://images.unsplash.com/photo-1546470427-e5ac89cd0b9d?auto=format&fit=crop&w=200&q=80",
+      },
+      {
+        name: "Fresh Potatoes",
+        quantity: "3 kg × ₹35",
+        price: 105,
+        image:
+          "https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&w=200&q=80",
+      },
+      {
+        name: "Fresh Vegetables",
+        quantity: "2 kg × ₹60",
+        price: 120,
+        image:
+          "https://images.unsplash.com/photo-1566385101042-1a0aa0c1268c?auto=format&fit=crop&w=200&q=80",
+      },
+    ],
+  },
 
-type Order = {
-  id: string;
-  date: string;
-  customerName: string;
-  phone: string;
-  address: string;
-  items: OrderItem[];
-  subtotal: number;
-  delivery: number;
-  total: number;
-  status: string;
-};
+  {
+    id: "ORD1002",
+    date: "20 Aug 2026 • 03:45 PM",
+    status: "Accepted",
+    statusClass: "accepted",
+    payment: "Cash on Delivery",
+    items: "2 Products",
+    delivery: "In Progress",
+    total: 160,
+    button: "Track Order →",
+    products: [
+      {
+        name: "Organic Tomatoes",
+        quantity: "2 kg × ₹45",
+        price: 90,
+        image:
+          "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=200&q=80",
+      },
+      {
+        name: "Fresh Onions",
+        quantity: "2 kg × ₹35",
+        price: 70,
+        image:
+          "https://images.unsplash.com/photo-1582515073490-39981397c445?auto=format&fit=crop&w=200&q=80",
+      },
+    ],
+  },
+
+  {
+    id: "ORD1001",
+    date: "18 Aug 2026 • 12:20 PM",
+    status: "Pending",
+    statusClass: "pending",
+    payment: "Cash on Delivery",
+    items: "1 Product",
+    delivery: "Processing",
+    total: 175,
+    button: "View Order →",
+    products: [
+      {
+        name: "Fresh Potatoes",
+        quantity: "5 kg × ₹35",
+        price: 175,
+        image:
+          "https://images.unsplash.com/photo-1518977956812-cd3db6f2f3a3?auto=format&fit=crop&w=200&q=80",
+      },
+    ],
+  },
+];
 
 export default function OrdersPage() {
-  const [orders, setOrders] = useState<Order[]>([]);
-
-  useEffect(() => {
-    const storedOrders = localStorage.getItem("orders");
-
-    if (storedOrders) {
-      setOrders(JSON.parse(storedOrders));
-    }
-  }, []);
-
-  const getStatusClass = (status: string) => {
-    switch (status) {
-      case "Pending":
-        return "status-pending";
-
-      case "Accepted":
-        return "status-accepted";
-
-      case "Preparing":
-        return "status-preparing";
-
-      case "Ready":
-        return "status-ready";
-
-      case "Out for Delivery":
-        return "status-delivery";
-
-      case "Delivered":
-        return "status-delivered";
-
-      case "Rejected":
-        return "status-rejected";
-
-      default:
-        return "";
-    }
-  };
-
   return (
-    <main className="orders-page">
+    <div className="orders-page">
 
-      {/* Header */}
+      {/* ================= HEADER ================= */}
 
       <header className="market-header">
 
-        <Link href="/" className="market-logo">
-          🌱 FarmDirect
+        <Link
+          href="/marketplace"
+          className="market-logo"
+        >
+          🌱 SmartAgri
         </Link>
 
         <nav>
@@ -81,182 +109,225 @@ export default function OrdersPage() {
           </Link>
 
           <Link href="/cart">
-            🛒 Cart
+            Cart
           </Link>
 
-          <Link href="/orders" className="market-active">
-            My Orders
+          <Link
+            href="/orders"
+            className="active"
+          >
+            Orders
           </Link>
 
-          <Link href="/login">
-            Login
+          <Link href="/profile">
+            Profile
           </Link>
         </nav>
 
       </header>
 
 
-      {/* Page */}
+      {/* ================= MAIN ================= */}
 
-      <section className="orders-container">
+      <main className="orders-container">
 
-        <div className="orders-heading">
+        {/* ================= TITLE ================= */}
 
-          <p className="hero-small">
-            CUSTOMER ORDERS
-          </p>
+        <div className="orders-header">
 
-          <h1>
-            My Orders 📦
-          </h1>
+          <div>
 
-          <p>
-            Track all your orders placed directly
-            with farmers.
-          </p>
+            <p className="orders-label">
+              Purchase History
+            </p>
+
+            <h1>
+              My Orders
+            </h1>
+
+            <p>
+              Track your purchases and view your
+              complete order history.
+            </p>
+
+          </div>
+
+          <div className="order-count">
+            {orders.length}
+          </div>
 
         </div>
 
 
-        {orders.length === 0 ? (
+        {/* ================= ORDERS ================= */}
 
-          <div className="empty-orders">
+        <div className="orders-list">
 
-            <div className="empty-icon">
-              📦
-            </div>
+          {orders.map((order) => (
 
-            <h2>
-              No Orders Yet
-            </h2>
-
-            <p>
-              You haven't placed any orders yet.
-            </p>
-
-            <Link
-              href="/marketplace"
-              className="primary-button"
+            <article
+              className="order-card"
+              key={order.id}
             >
-              Browse Marketplace →
-            </Link>
 
-          </div>
+              {/* ORDER TOP */}
 
-        ) : (
+              <div className="order-top">
 
-          <div className="orders-list">
+                <div>
 
-            {orders.map((order) => (
+                  <h2 className="order-number">
+                    Order #{order.id}
+                  </h2>
 
-              <div
-                className="order-card"
-                key={order.id}
-              >
+                  <p className="order-date">
+                    {order.date}
+                  </p>
 
-                {/* Order Header */}
+                </div>
 
-                <div className="order-header">
+                <span
+                  className={`order-status ${order.statusClass}`}
+                >
+                  {order.status}
+                </span>
 
-                  <div>
+              </div>
 
-                    <h2>
-                      Order #{order.id}
-                    </h2>
 
-                    <p>
-                      {order.date}
-                    </p>
+              {/* ORDER INFORMATION */}
 
-                  </div>
+              <div className="order-info">
 
-                  <span
-                    className={`order-status ${getStatusClass(
-                      order.status
-                    )}`}
-                  >
-                    {order.status}
+                <div className="order-info-item">
+
+                  <span>
+                    Payment
                   </span>
 
-                </div>
-
-
-                {/* Products */}
-
-                <div className="order-items">
-
-                  {order.items.map((item) => (
-
-                    <div
-                      className="order-item"
-                      key={item.id}
-                    >
-
-                      <div>
-
-                        <strong>
-                          {item.name}
-                        </strong>
-
-                        <p>
-                          Farmer: {item.farmer}
-                        </p>
-
-                        <p>
-                          Quantity: {item.quantity}{" "}
-                          {item.unit}
-                        </p>
-
-                      </div>
-
-                      <strong>
-                        ₹
-                        {item.price *
-                          item.quantity}
-                      </strong>
-
-                    </div>
-
-                  ))}
+                  <strong>
+                    {order.payment}
+                  </strong>
 
                 </div>
 
 
-                {/* Order Footer */}
+                <div className="order-info-item">
 
-                <div className="order-footer">
+                  <span>
+                    Items
+                  </span>
 
-                  <div>
+                  <strong>
+                    {order.items}
+                  </strong>
 
-                    <p>
-                      Delivery: ₹{order.delivery}
-                    </p>
+                </div>
 
-                    <strong>
-                      Total: ₹{order.total}
-                    </strong>
 
-                  </div>
+                <div className="order-info-item">
 
-                  <Link
-                    href={`/order-details?id=${order.id}`}
-                    className="view-order-button"
-                  >
-                    View Details
-                  </Link>
+                  <span>
+                    Delivery
+                  </span>
+
+                  <strong>
+                    {order.delivery}
+                  </strong>
 
                 </div>
 
               </div>
 
-            ))}
 
-          </div>
+              {/* ================= ITEMS ================= */}
 
-        )}
+              <div className="order-items">
 
-      </section>
+                <h3 className="order-items-title">
+                  Order Items
+                </h3>
 
-    </main>
+
+                {order.products.map(
+                  (product, index) => (
+
+                    <div
+                      className="order-item"
+                      key={`${order.id}-${index}`}
+                    >
+
+                      <div className="order-item-left">
+
+                        <div className="order-item-image">
+
+                          <img
+                            src={product.image}
+                            alt={product.name}
+                          />
+
+                        </div>
+
+
+                        <div className="order-item-name">
+
+                          <strong>
+                            {product.name}
+                          </strong>
+
+                          <span>
+                            {product.quantity}
+                          </span>
+
+                        </div>
+
+                      </div>
+
+
+                      <div className="order-item-price">
+                        ₹{product.price}
+                      </div>
+
+                    </div>
+
+                  )
+                )}
+
+              </div>
+
+
+              {/* ================= TOTAL ================= */}
+
+              <div className="order-total">
+
+                <span>
+                  Total Amount
+                </span>
+
+                <strong>
+                  ₹{order.total}
+                </strong>
+
+              </div>
+
+
+              {/* ================= BUTTON ================= */}
+
+              <Link
+                href={`/order-details/${order.id}`}
+                className="view-order-btn"
+              >
+                {order.button}
+              </Link>
+
+            </article>
+
+          ))}
+
+        </div>
+
+      </main>
+
+    </div>
   );
 }

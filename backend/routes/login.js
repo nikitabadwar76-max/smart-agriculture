@@ -1,31 +1,23 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
-
-const router = express.Router();
 const db = require("../db");
 
-// =====================================================
-// CUSTOMER LOGIN
-// POST /api/login
-// =====================================================
+const router = express.Router();
 
 router.post("/", async (req, res) => {
-    const {
-        phone,
-        password
-    } = req.body;
-
-    // Validation
-    if (!phone || !password) {
-        return res.status(400).json({
-            success: false,
-            message: "Mobile number and password are required"
-        });
-    }
-
     try {
+        const { mobile, password } = req.body;
+
+        // Validate input
+        if (!mobile || !password) {
+            return res.status(400).json({
+                success: false,
+                message: "Mobile number and password are required"
+            });
+        }
+
         // Find customer
-        const [customers] = await db.promise().query(
+        const [customers] = await db.query(
             `SELECT
                 customer_id,
                 customer_name,
@@ -34,9 +26,10 @@ router.post("/", async (req, res) => {
              FROM customers
              WHERE mobile = ?
              LIMIT 1`,
-            [phone]
+            [mobile]
         );
 
+        // Customer not found
         if (customers.length === 0) {
             return res.status(401).json({
                 success: false,
@@ -59,6 +52,7 @@ router.post("/", async (req, res) => {
             });
         }
 
+        // Login successful
         return res.json({
             success: true,
             message: "Login successful",
@@ -70,7 +64,7 @@ router.post("/", async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Login error:", error);
+        console.error("Login Error:", error);
 
         return res.status(500).json({
             success: false,

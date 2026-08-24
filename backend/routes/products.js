@@ -57,7 +57,7 @@ router.post("/", async (req, res) => {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
-        const [result] = await db.promise().query(sql, [
+        const [result] = await db.query(sql, [
             farmer_id,
             product_name,
             category,
@@ -75,11 +75,12 @@ router.post("/", async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Add product error:", error);
+        console.error("Add Product Error:", error);
 
         return res.status(500).json({
             success: false,
-            message: "Failed to add product"
+            message: "Failed to add product",
+            error: error.message
         });
     }
 });
@@ -92,8 +93,10 @@ router.post("/", async (req, res) => {
 
 router.get("/", async (req, res) => {
     try {
-        const [products] = await db.promise().query(
-            `SELECT
+        console.log("GET /api/products called");
+
+        const [products] = await db.query(`
+            SELECT
                 product_id,
                 farmer_id,
                 product_name,
@@ -106,72 +109,32 @@ router.get("/", async (req, res) => {
                 status,
                 created_at,
                 updated_at
-             FROM products
-             WHERE status = 'available'
-             AND stock > 0
-             ORDER BY created_at DESC`
-        );
+            FROM products
+            WHERE status = 'available'
+            AND stock > 0
+            ORDER BY created_at DESC
+        `);
 
-        return res.json({
+        console.log("Products found:", products.length);
+
+        return res.status(200).json({
             success: true,
-            products
+            products: products
         });
 
     } catch (error) {
-        console.error("❌ Get products error:", error);
+        console.error("=================================");
+        console.error("GET PRODUCTS ERROR:");
+        console.error(error);
+        console.error("=================================");
 
         return res.status(500).json({
             success: false,
-            message: "Failed to get products"
+            message: "Failed to get products",
+            error: error.message
         });
     }
 });
-
-
-// =====================================================
-// GET PRODUCTS OF ONE FARMER
-// GET /api/products/farmer/:farmerId
-// =====================================================
-
-router.get("/farmer/:farmerId", async (req, res) => {
-    try {
-        const { farmerId } = req.params;
-
-        const [products] = await db.promise().query(
-            `SELECT
-                product_id,
-                farmer_id,
-                product_name,
-                category,
-                description,
-                price,
-                unit,
-                stock,
-                image_url,
-                status,
-                created_at,
-                updated_at
-             FROM products
-             WHERE farmer_id = ?
-             ORDER BY created_at DESC`,
-            [farmerId]
-        );
-
-        return res.json({
-            success: true,
-            products
-        });
-
-    } catch (error) {
-        console.error("❌ Farmer products error:", error);
-
-        return res.status(500).json({
-            success: false,
-            message: "Failed to get farmer products"
-        });
-    }
-});
-
 
 // =====================================================
 // GET SINGLE PRODUCT
@@ -180,10 +143,11 @@ router.get("/farmer/:farmerId", async (req, res) => {
 
 router.get("/:id", async (req, res) => {
     try {
-        const { id } = req.params;
+        const productId = req.params.id;
 
-        const [products] = await db.promise().query(
-            `SELECT
+        const [products] = await db.query(
+            `
+            SELECT
                 product_id,
                 farmer_id,
                 product_name,
@@ -196,9 +160,11 @@ router.get("/:id", async (req, res) => {
                 status,
                 created_at,
                 updated_at
-             FROM products
-             WHERE product_id = ?`,
-            [id]
+            FROM products
+            WHERE product_id = ?
+            LIMIT 1
+            `,
+            [productId]
         );
 
         if (products.length === 0) {
@@ -208,17 +174,18 @@ router.get("/:id", async (req, res) => {
             });
         }
 
-        return res.json({
+        return res.status(200).json({
             success: true,
             product: products[0]
         });
 
     } catch (error) {
-        console.error("❌ Get single product error:", error);
+        console.error("Get Product Error:", error);
 
         return res.status(500).json({
             success: false,
-            message: "Failed to get product"
+            message: "Failed to get product",
+            error: error.message
         });
     }
 });
@@ -231,7 +198,7 @@ router.get("/:id", async (req, res) => {
 
 router.put("/:id", async (req, res) => {
     try {
-        const { id } = req.params;
+        const productId = req.params.id;
 
         const {
             product_name,
@@ -253,7 +220,7 @@ router.put("/:id", async (req, res) => {
         ) {
             return res.status(400).json({
                 success: false,
-                message: "Please fill all required fields"
+                message: "Please provide all required fields"
             });
         }
 
@@ -264,9 +231,10 @@ router.put("/:id", async (req, res) => {
             });
         }
 
-        const [result] = await db.promise().query(
-            `UPDATE products
-             SET
+        const [result] = await db.query(
+            `
+            UPDATE products
+            SET
                 product_name = ?,
                 category = ?,
                 description = ?,
@@ -275,7 +243,8 @@ router.put("/:id", async (req, res) => {
                 stock = ?,
                 image_url = ?,
                 status = ?
-             WHERE product_id = ?`,
+            WHERE product_id = ?
+            `,
             [
                 product_name,
                 category,
@@ -285,7 +254,7 @@ router.put("/:id", async (req, res) => {
                 stock,
                 image_url || null,
                 status || "available",
-                id
+                productId
             ]
         );
 
@@ -296,17 +265,18 @@ router.put("/:id", async (req, res) => {
             });
         }
 
-        return res.json({
+        return res.status(200).json({
             success: true,
             message: "Product updated successfully"
         });
 
     } catch (error) {
-        console.error("❌ Update product error:", error);
+        console.error("Update Product Error:", error);
 
         return res.status(500).json({
             success: false,
-            message: "Failed to update product"
+            message: "Failed to update product",
+            error: error.message
         });
     }
 });
@@ -319,12 +289,14 @@ router.put("/:id", async (req, res) => {
 
 router.delete("/:id", async (req, res) => {
     try {
-        const { id } = req.params;
+        const productId = req.params.id;
 
-        const [result] = await db.promise().query(
-            `DELETE FROM products
-             WHERE product_id = ?`,
-            [id]
+        const [result] = await db.query(
+            `
+            DELETE FROM products
+            WHERE product_id = ?
+            `,
+            [productId]
         );
 
         if (result.affectedRows === 0) {
@@ -334,19 +306,21 @@ router.delete("/:id", async (req, res) => {
             });
         }
 
-        return res.json({
+        return res.status(200).json({
             success: true,
             message: "Product deleted successfully"
         });
 
     } catch (error) {
-        console.error("❌ Delete product error:", error);
+        console.error("Delete Product Error:", error);
 
         return res.status(500).json({
             success: false,
-            message: "Failed to delete product"
+            message: "Failed to delete product",
+            error: error.message
         });
     }
 });
+
 
 module.exports = router;

@@ -24,7 +24,7 @@ export default function RegisterPage() {
           href="/"
           className="register-logo"
         >
-          🌱 FarmDirect
+          🌱 SmartAgri
         </Link>
 
       </header>
@@ -45,7 +45,7 @@ export default function RegisterPage() {
           </h1>
 
           <span>
-            Choose how you want to use FarmDirect
+            Choose how you want to use SmartAgri
           </span>
 
         </div>

@@ -1,18 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 
 interface Product {
   product_id: number;
-  farmer_id: number | null;
+  farmer_id: number;
   product_name: string;
   category: string;
-  description: string | null;
+  description?: string;
   price: string | number;
   unit: string;
   stock: string | number;
-  image_url: string | null;
-  status: string;
+  image_url?: string;
+  status?: string;
 }
 
 export default function MarketplacePage() {
@@ -20,21 +21,23 @@ export default function MarketplacePage() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState("");
-
-  // ==========================================
-  // FETCH PRODUCTS
-  // ==========================================
+  const [error, setError] = useState("");
 
   const fetchProducts = async () => {
     try {
       setLoading(true);
+      setError("");
 
       const response = await fetch(
-        "http://localhost:5000/api/products"
+        "http://localhost:5000/api/products",
+        {
+          cache: "no-store",
+        }
       );
 
       const data = await response.json();
+
+      console.log("Products API:", data);
 
       if (!response.ok || !data.success) {
         throw new Error(
@@ -42,9 +45,17 @@ export default function MarketplacePage() {
         );
       }
 
-      setProducts(data.products);
+      setProducts(Array.isArray(data.products) ? data.products : []);
+
     } catch (error) {
-      console.error("❌ Marketplace Error:", error);
+      console.error("Product fetch error:", error);
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to load products"
+      );
+
     } finally {
       setLoading(false);
     }
@@ -54,157 +65,127 @@ export default function MarketplacePage() {
     fetchProducts();
   }, []);
 
-  // ==========================================
-  // ADD TO CART
-  // ==========================================
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      const matchesSearch =
+        product.product_name
+          .toLowerCase()
+          .includes(search.toLowerCase()) ||
+        product.category
+          .toLowerCase()
+          .includes(search.toLowerCase());
 
-  const addToCart = (product: Product) => {
-    try {
-      const existingCart = JSON.parse(
-        localStorage.getItem("cart") || "[]"
-      );
+      const matchesCategory =
+        category === "All" ||
+        product.category === category;
 
-      const existingProduct = existingCart.find(
-        (item: any) =>
-          item.product_id === product.product_id
-      );
-
-      if (existingProduct) {
-        existingProduct.quantity += 1;
-      } else {
-        existingCart.push({
-          product_id: product.product_id,
-          farmer_id: product.farmer_id,
-          product_name: product.product_name,
-          price: Number(product.price),
-          unit: product.unit,
-          image_url: product.image_url,
-          quantity: 1,
-        });
-      }
-
-      localStorage.setItem(
-        "cart",
-        JSON.stringify(existingCart)
-      );
-
-      setMessage(
-        `✅ ${product.product_name} added to cart!`
-      );
-
-      setTimeout(() => {
-        setMessage("");
-      }, 2500);
-    } catch (error) {
-      console.error("❌ Cart Error:", error);
-    }
-  };
-
-  // ==========================================
-  // FILTER PRODUCTS
-  // ==========================================
-
-  const filteredProducts = products.filter((product) => {
-    const matchesSearch =
-      product.product_name
-        .toLowerCase()
-        .includes(search.toLowerCase());
-
-    const matchesCategory =
-      category === "All" ||
-      product.category === category;
-
-    return matchesSearch && matchesCategory;
-  });
-
-  // ==========================================
-  // PAGE
-  // ==========================================
+      return matchesSearch && matchesCategory;
+    });
+  }, [products, search, category]);
 
   return (
-    <main className="marketplace-page min-h-screen bg-gradient-to-b from-green-50 to-white">
+    <main className="min-h-screen bg-gray-50">
 
-      {/* ======================================
-          NAVBAR
-      ====================================== */}
+      {/* NAVBAR */}
 
-      <nav className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+      <nav className="bg-white border-b sticky top-0 z-50">
 
-          <div>
-            <h1 className="text-2xl font-bold text-green-700">
-              🌱 SmartAgri
-            </h1>
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
 
-            <p className="text-xs text-gray-500">
-              Fresh from Farmers
-            </p>
+          <Link
+            href="/"
+            className="text-2xl font-extrabold text-green-700"
+          >
+            🌱 SmartAgri
+          </Link>
+
+          <div className="flex items-center gap-6">
+
+            <Link
+              href="/"
+              className="text-gray-600 hover:text-green-600 font-medium"
+            >
+              Home
+            </Link>
+
+            <Link
+              href="/marketplace"
+              className="text-green-700 font-bold"
+            >
+              Marketplace
+            </Link>
+
+            <Link
+              href="/orders"
+              className="text-gray-600 hover:text-green-600 font-medium"
+            >
+              Orders
+            </Link>
+
+            <Link
+              href="/cart"
+              className="text-gray-600 hover:text-green-600 font-medium"
+            >
+              🛒 Cart
+            </Link>
+
+            <Link
+              href="/login"
+              className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl font-semibold"
+            >
+              Login
+            </Link>
+
           </div>
 
-          <a
-            href="/cart"
-            className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl font-semibold transition"
-          >
-            🛒 Cart
-          </a>
-
         </div>
+
       </nav>
 
-      {/* ======================================
-          HERO
-      ====================================== */}
 
-      <section className="max-w-7xl mx-auto px-6 pt-12 pb-8">
+      {/* HERO */}
 
-        <div className="bg-gradient-to-r from-green-600 to-emerald-500 rounded-3xl p-8 md:p-12 text-white shadow-lg">
+      <section className="bg-gradient-to-r from-green-700 to-emerald-600 text-white">
 
-          <p className="text-green-100 font-semibold mb-2">
-            🌾 FARMER DIRECT MARKETPLACE
+        <div className="max-w-7xl mx-auto px-6 py-16">
+
+          <p className="uppercase tracking-widest text-green-100 font-semibold text-sm">
+            Fresh • Local • Direct
           </p>
 
-          <h2 className="text-4xl md:text-5xl font-bold">
-            Fresh Products,
-            <br />
-            Direct From Farmers
-          </h2>
+          <h1 className="text-4xl md:text-5xl font-extrabold mt-3">
+            Fresh Products Marketplace 🌾
+          </h1>
 
-          <p className="mt-4 text-green-50 max-w-2xl text-lg">
-            Buy fresh vegetables, fruits, grains and other
-            farm products directly from local farmers.
+          <p className="text-green-50 text-lg mt-4 max-w-2xl">
+            Shop fresh products directly from local farmers
+            and support sustainable agriculture.
           </p>
 
         </div>
 
       </section>
 
-      {/* ======================================
-          SEARCH + FILTER
-      ====================================== */}
 
-      <section className="max-w-7xl mx-auto px-6">
+      {/* MAIN */}
 
-        <div className="bg-white rounded-2xl shadow-md p-5 mb-8">
+      <section className="max-w-7xl mx-auto px-6 py-10">
+
+        {/* SEARCH */}
+
+        <div className="bg-white rounded-2xl shadow-sm border p-5 mb-10">
 
           <div className="flex flex-col md:flex-row gap-4">
 
-            {/* SEARCH */}
-
-            <div className="flex-1">
-
-              <input
-                type="text"
-                placeholder="🔍 Search products..."
-                value={search}
-                onChange={(e) =>
-                  setSearch(e.target.value)
-                }
-                className="w-full border border-gray-300 rounded-xl px-5 py-3 outline-none focus:ring-2 focus:ring-green-500"
-              />
-
-            </div>
-
-            {/* CATEGORY */}
+            <input
+              type="text"
+              placeholder="🔎 Search products..."
+              value={search}
+              onChange={(e) =>
+                setSearch(e.target.value)
+              }
+              className="flex-1 border border-gray-300 rounded-xl px-5 py-3 outline-none focus:ring-2 focus:ring-green-500"
+            />
 
             <select
               value={category}
@@ -213,52 +194,77 @@ export default function MarketplacePage() {
               }
               className="md:w-56 border border-gray-300 rounded-xl px-5 py-3 bg-white outline-none focus:ring-2 focus:ring-green-500"
             >
-              <option value="All">All Categories</option>
+              <option value="All">
+                All Categories
+              </option>
+
               <option value="Vegetables">
                 Vegetables
               </option>
+
               <option value="Fruits">
                 Fruits
               </option>
+
               <option value="Grains">
                 Grains
               </option>
+
               <option value="Dairy">
                 Dairy
               </option>
+
               <option value="Other">
                 Other
               </option>
+
             </select>
 
           </div>
 
         </div>
 
-        {/* ======================================
-            SUCCESS MESSAGE
-        ====================================== */}
 
-        {message && (
-          <div className="fixed top-24 right-6 z-50 bg-green-600 text-white px-6 py-4 rounded-xl shadow-lg font-semibold">
-            {message}
+        {/* ERROR */}
+
+        {error && (
+
+          <div className="bg-red-50 border border-red-200 text-red-700 rounded-2xl p-6 mb-8">
+
+            <h3 className="font-bold text-lg">
+              Unable to load products
+            </h3>
+
+            <p className="mt-1">
+              {error}
+            </p>
+
+            <button
+              onClick={fetchProducts}
+              className="mt-4 bg-red-600 text-white px-5 py-2 rounded-lg font-semibold"
+            >
+              Try Again
+            </button>
+
           </div>
+
         )}
 
-        {/* ======================================
-            TITLE
-        ====================================== */}
+
+        {/* TITLE */}
 
         <div className="flex justify-between items-center mb-6">
 
           <div>
+
             <h2 className="text-3xl font-bold text-gray-800">
-              🥬 Fresh Products
+              🌾 Fresh Products
             </h2>
 
             <p className="text-gray-500 mt-1">
               Choose fresh products directly from farmers.
             </p>
+
           </div>
 
           <span className="hidden md:block bg-green-100 text-green-700 px-4 py-2 rounded-full font-semibold">
@@ -267,9 +273,8 @@ export default function MarketplacePage() {
 
         </div>
 
-        {/* ======================================
-            LOADING
-        ====================================== */}
+
+        {/* LOADING */}
 
         {loading ? (
 
@@ -286,10 +291,6 @@ export default function MarketplacePage() {
           </div>
 
         ) : filteredProducts.length === 0 ? (
-
-          /* ======================================
-              NO PRODUCTS
-          ====================================== */
 
           <div className="bg-white rounded-2xl shadow p-12 text-center">
 
@@ -309,9 +310,7 @@ export default function MarketplacePage() {
 
         ) : (
 
-          /* ======================================
-              PRODUCT GRID
-          ====================================== */
+          /* PRODUCT GRID */
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-12">
 
@@ -332,6 +331,10 @@ export default function MarketplacePage() {
                       src={product.image_url}
                       alt={product.product_name}
                       className="w-full h-full object-cover hover:scale-105 transition duration-300"
+                      onError={(e) => {
+                        e.currentTarget.style.display =
+                          "none";
+                      }}
                     />
 
                   ) : (
@@ -344,11 +347,12 @@ export default function MarketplacePage() {
 
                 </div>
 
+
                 {/* DETAILS */}
 
                 <div className="p-5">
 
-                  <div className="flex justify-between items-start">
+                  <div className="flex justify-between items-start gap-2">
 
                     <span className="bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full">
                       {product.category}
@@ -360,14 +364,17 @@ export default function MarketplacePage() {
 
                   </div>
 
+
                   <h3 className="text-xl font-bold text-gray-800 mt-3">
                     {product.product_name}
                   </h3>
+
 
                   <p className="text-gray-500 text-sm mt-2 min-h-[40px]">
                     {product.description ||
                       "Fresh farm product directly from farmer."}
                   </p>
+
 
                   {/* PRICE */}
 
@@ -391,12 +398,43 @@ export default function MarketplacePage() {
 
                   </div>
 
+
                   {/* ADD CART */}
 
                   <button
-                    onClick={() =>
-                      addToCart(product)
-                    }
+                    onClick={() => {
+                      const existingCart =
+                        JSON.parse(
+                          localStorage.getItem("cart") || "[]"
+                        );
+
+                      const existingIndex =
+                        existingCart.findIndex(
+                          (item: Product) =>
+                            item.product_id ===
+                            product.product_id
+                        );
+
+                      if (existingIndex >= 0) {
+                        existingCart[existingIndex].quantity =
+                          (existingCart[existingIndex].quantity || 1) +
+                          1;
+                      } else {
+                        existingCart.push({
+                          ...product,
+                          quantity: 1,
+                        });
+                      }
+
+                      localStorage.setItem(
+                        "cart",
+                        JSON.stringify(existingCart)
+                      );
+
+                      alert(
+                        `${product.product_name} added to cart!`
+                      );
+                    }}
                     className="w-full mt-5 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition"
                   >
                     🛒 Add to Cart

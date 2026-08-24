@@ -1,41 +1,36 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
-
-const router = express.Router();
 const db = require("../db");
 
-// =====================================================
-// CUSTOMER REGISTRATION
-// POST /api/customers/register
-// =====================================================
+const router = express.Router();
 
+// Customer Registration
 router.post("/register", async (req, res) => {
-    const {
-        name,
-        phone,
-        password,
-        address
-    } = req.body;
-
-    // Validation
-    if (!name || !phone || !password) {
-        return res.status(400).json({
-            success: false,
-            message: "Name, mobile number and password are required"
-        });
-    }
-
     try {
-        // Check existing customer
-        const [existing] = await db.promise().query(
+        const {
+            customer_name,
+            mobile,
+            password
+        } = req.body;
+
+        // Validate input
+        if (!customer_name || !mobile || !password) {
+            return res.status(400).json({
+                success: false,
+                message: "Name, mobile number and password are required"
+            });
+        }
+
+        // Check whether mobile already exists
+        const [existingCustomers] = await db.query(
             `SELECT customer_id
              FROM customers
              WHERE mobile = ?
              LIMIT 1`,
-            [phone]
+            [mobile]
         );
 
-        if (existing.length > 0) {
+        if (existingCustomers.length > 0) {
             return res.status(409).json({
                 success: false,
                 message: "Mobile number is already registered"
@@ -46,41 +41,40 @@ router.post("/register", async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Insert customer
-        const [result] = await db.promise().query(
+        const [result] = await db.query(
             `INSERT INTO customers
-            (
+                (customer_name, mobile, password)
+             VALUES (?, ?, ?)`,
+            [
                 customer_name,
                 mobile,
-                password,
-                address
-            )
-            VALUES (?, ?, ?, ?)`,
-            [
-                name,
-                phone,
-                hashedPassword,
-                address || null
+                hashedPassword
             ]
         );
 
-        console.log(`✅ Customer registered: ${result.insertId}`);
+        console.log(
+            `Customer registered: ${result.insertId}`
+        );
 
         return res.status(201).json({
             success: true,
             message: "Customer registered successfully",
             customer: {
                 customer_id: result.insertId,
-                customer_name: name,
-                mobile: phone
+                customer_name,
+                mobile
             }
         });
 
     } catch (error) {
-        console.error("❌ Customer registration error:", error);
+        console.error(
+            "Customer Registration Error:",
+            error
+        );
 
         return res.status(500).json({
             success: false,
-            message: "Failed to register customer"
+            message: "Server error during registration"
         });
     }
 });

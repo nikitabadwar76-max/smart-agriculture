@@ -157,7 +157,7 @@ export default function CartPage() {
             </span>
 
             <div>
-              <strong>FarmDirect</strong>
+              <strong>SmartAgri</strong>
               <small>Fresh from Farmers</small>
             </div>
           </div>
@@ -241,7 +241,7 @@ export default function CartPage() {
           </span>
 
           <div>
-            <strong>FarmDirect</strong>
+            <strong>SmartAgri</strong>
             <small>Fresh from Farmers</small>
           </div>
         </div>
@@ -600,7 +600,7 @@ export default function CartPage() {
       <footer className="cart-footer">
 
         <div className="footer-logo">
-          🚜 <strong>FarmDirect</strong>
+          🚜 <strong>SmartAgri</strong>
         </div>
 
         <p>

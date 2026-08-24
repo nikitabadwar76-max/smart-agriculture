@@ -156,7 +156,7 @@ export default function FarmerOrdersPage() {
           href="/"
           className="market-logo"
         >
-          🌱 FarmDirect
+          🌱 SmartAgri
         </Link>
 
 

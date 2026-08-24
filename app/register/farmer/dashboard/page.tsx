@@ -8,7 +8,7 @@ export default function FarmerDashboard() {
       <aside className="farmer-sidebar">
 
         <div className="farmer-logo">
-          🌱 FarmDirect
+          🌱 SmartAgri
         </div>
 
         <div className="farmer-profile">
@@ -201,7 +201,7 @@ export default function FarmerDashboard() {
             <h3>Start Selling Your Products</h3>
 
             <p>
-              Add your agricultural products to FarmDirect.
+              Add your agricultural products to SmartAgri.
               Customers will be able to discover and purchase
               your products directly from you.
             </p>

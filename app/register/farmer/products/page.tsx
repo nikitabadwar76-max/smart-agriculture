@@ -57,7 +57,7 @@ export default function MyProducts() {
       <aside className="farmer-sidebar">
 
         <div className="farmer-logo">
-          🌱 FarmDirect
+          🌱 SmartAgri
         </div>
 
         <div className="farmer-profile">
