@@ -29,7 +29,7 @@ router.post("/register", async (req, res) => {
 
     try {
         // Check existing email
-        const [existing] = await db.promise().query(
+        const [existing] = await db.query(
             "SELECT farmer_id FROM farmers WHERE email = ?",
             [email]
         );
@@ -45,7 +45,7 @@ router.post("/register", async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Insert farmer
-        const [result] = await db.promise().query(
+        const [result] = await db.query(
             `INSERT INTO farmers
             (
                 farmer_name,
@@ -102,7 +102,7 @@ router.post("/login", async (req, res) => {
     }
 
     try {
-        const [results] = await db.promise().query(
+        const [results] = await db.query(
             `SELECT
                 farmer_id,
                 farmer_name,
@@ -181,7 +181,7 @@ router.get("/:id", async (req, res) => {
     const farmerId = req.params.id;
 
     try {
-        const [results] = await db.promise().query(
+        const [results] = await db.query(
             `SELECT
                 farmer_id,
                 farmer_name,

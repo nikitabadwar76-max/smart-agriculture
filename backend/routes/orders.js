@@ -17,6 +17,10 @@ router.post("/", async (req, res) => {
         items
     } = req.body;
 
+    // -------------------------------------------------
+    // VALIDATION
+    // -------------------------------------------------
+
     if (
         !customer_id ||
         total_amount === undefined ||
@@ -30,13 +34,48 @@ router.post("/", async (req, res) => {
         });
     }
 
-    const connection = await db.promise().getConnection();
+    let connection;
 
     try {
-        // Start transaction
+        // -------------------------------------------------
+        // GET CONNECTION
+        // IMPORTANT:
+        // db is already mysql2/promise
+        // DO NOT USE db.promise()
+        // -------------------------------------------------
+
+        connection = await db.getConnection();
+
+        // -------------------------------------------------
+        // START TRANSACTION
+        // -------------------------------------------------
+
         await connection.beginTransaction();
 
-        // Insert order
+        // -------------------------------------------------
+        // CHECK CUSTOMER
+        // -------------------------------------------------
+
+        const [customers] = await connection.query(
+            `SELECT customer_id
+             FROM customers
+             WHERE customer_id = ?`,
+            [customer_id]
+        );
+
+        if (customers.length === 0) {
+            await connection.rollback();
+
+            return res.status(400).json({
+                success: false,
+                message: "Customer not found"
+            });
+        }
+
+        // -------------------------------------------------
+        // INSERT ORDER
+        // -------------------------------------------------
+
         const [orderResult] = await connection.query(
             `INSERT INTO orders
             (
@@ -48,7 +87,7 @@ router.post("/", async (req, res) => {
             VALUES (?, ?, ?, ?)`,
             [
                 customer_id,
-                total_amount,
+                Number(total_amount),
                 payment_method || "Cash on Delivery",
                 delivery_address
             ]
@@ -56,23 +95,53 @@ router.post("/", async (req, res) => {
 
         const orderId = orderResult.insertId;
 
-        // Insert order items
+        // -------------------------------------------------
+        // INSERT ORDER ITEMS
+        // -------------------------------------------------
+
         for (const item of items) {
+
             const productId = Number(item.product_id);
-            const farmerId = Number(item.farmer_id) || 0;
+            const farmerId = Number(item.farmer_id);
             const quantity = Number(item.quantity);
             const price = Number(item.price);
 
+            // Validate item
             if (
                 !productId ||
                 !quantity ||
                 quantity <= 0 ||
+                !Number.isFinite(price) ||
                 price < 0
             ) {
                 throw new Error("Invalid order item");
             }
 
+            // If farmer_id is missing, get it from products table
+            let finalFarmerId = farmerId;
+
+            if (!finalFarmerId) {
+                const [products] = await connection.query(
+                    `SELECT farmer_id
+                     FROM products
+                     WHERE product_id = ?`,
+                    [productId]
+                );
+
+                if (products.length === 0) {
+                    throw new Error(
+                        `Product ${productId} not found`
+                    );
+                }
+
+                finalFarmerId = products[0].farmer_id;
+            }
+
             const subtotal = price * quantity;
+
+            // -------------------------------------------------
+            // INSERT ORDER ITEM
+            // -------------------------------------------------
 
             await connection.query(
                 `INSERT INTO order_items
@@ -88,7 +157,7 @@ router.post("/", async (req, res) => {
                 [
                     orderId,
                     productId,
-                    farmerId,
+                    finalFarmerId,
                     quantity,
                     price,
                     subtotal
@@ -96,8 +165,15 @@ router.post("/", async (req, res) => {
             );
         }
 
-        // Commit transaction
+        // -------------------------------------------------
+        // COMMIT TRANSACTION
+        // -------------------------------------------------
+
         await connection.commit();
+
+        console.log(
+            `✅ Order ${orderId} placed successfully`
+        );
 
         return res.status(201).json({
             success: true,
@@ -106,18 +182,41 @@ router.post("/", async (req, res) => {
         });
 
     } catch (error) {
-        // Rollback if anything fails
-        await connection.rollback();
 
-        console.error("❌ Place order error:", error);
+        // -------------------------------------------------
+        // ROLLBACK
+        // -------------------------------------------------
+
+        if (connection) {
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+                console.error(
+                    "Rollback error:",
+                    rollbackError.message
+                );
+            }
+        }
+
+        console.error(
+            "❌ Place order error:",
+            error
+        );
 
         return res.status(500).json({
             success: false,
-            message: "Failed to place order"
+            message: error.message || "Failed to place order"
         });
 
     } finally {
-        connection.release();
+
+        // -------------------------------------------------
+        // RELEASE CONNECTION
+        // -------------------------------------------------
+
+        if (connection) {
+            connection.release();
+        }
     }
 });
 
@@ -128,10 +227,12 @@ router.post("/", async (req, res) => {
 // =====================================================
 
 router.get("/customer/:customerId", async (req, res) => {
+
     const { customerId } = req.params;
 
     try {
-        const [orders] = await db.promise().query(
+
+        const [orders] = await db.query(
             `SELECT *
              FROM orders
              WHERE customer_id = ?
@@ -145,7 +246,11 @@ router.get("/customer/:customerId", async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Get customer orders error:", error);
+
+        console.error(
+            "❌ Get customer orders error:",
+            error
+        );
 
         return res.status(500).json({
             success: false,
@@ -161,10 +266,12 @@ router.get("/customer/:customerId", async (req, res) => {
 // =====================================================
 
 router.get("/:orderId", async (req, res) => {
+
     const { orderId } = req.params;
 
     try {
-        const [orders] = await db.promise().query(
+
+        const [orders] = await db.query(
             `SELECT *
              FROM orders
              WHERE order_id = ?`,
@@ -172,13 +279,14 @@ router.get("/:orderId", async (req, res) => {
         );
 
         if (orders.length === 0) {
+
             return res.status(404).json({
                 success: false,
                 message: "Order not found"
             });
         }
 
-        const [items] = await db.promise().query(
+        const [items] = await db.query(
             `SELECT *
              FROM order_items
              WHERE order_id = ?`,
@@ -192,7 +300,11 @@ router.get("/:orderId", async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Get order error:", error);
+
+        console.error(
+            "❌ Get order error:",
+            error
+        );
 
         return res.status(500).json({
             success: false,
@@ -208,10 +320,12 @@ router.get("/:orderId", async (req, res) => {
 // =====================================================
 
 router.get("/farmer/:farmerId", async (req, res) => {
+
     const { farmerId } = req.params;
 
     try {
-        const [orders] = await db.promise().query(
+
+        const [orders] = await db.query(
             `SELECT
                 o.order_id,
                 o.customer_id,
@@ -239,7 +353,11 @@ router.get("/farmer/:farmerId", async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Get farmer orders error:", error);
+
+        console.error(
+            "❌ Get farmer orders error:",
+            error
+        );
 
         return res.status(500).json({
             success: false,
@@ -255,10 +373,12 @@ router.get("/farmer/:farmerId", async (req, res) => {
 // =====================================================
 
 router.put("/:orderId/status", async (req, res) => {
+
     const { orderId } = req.params;
     const { order_status } = req.body;
 
     if (!order_status) {
+
         return res.status(400).json({
             success: false,
             message: "Order status is required"
@@ -266,7 +386,8 @@ router.put("/:orderId/status", async (req, res) => {
     }
 
     try {
-        const [result] = await db.promise().query(
+
+        const [result] = await db.query(
             `UPDATE orders
              SET order_status = ?
              WHERE order_id = ?`,
@@ -277,6 +398,7 @@ router.put("/:orderId/status", async (req, res) => {
         );
 
         if (result.affectedRows === 0) {
+
             return res.status(404).json({
                 success: false,
                 message: "Order not found"
@@ -289,7 +411,11 @@ router.put("/:orderId/status", async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Update order status error:", error);
+
+        console.error(
+            "❌ Update order status error:",
+            error
+        );
 
         return res.status(500).json({
             success: false,
@@ -297,5 +423,10 @@ router.put("/:orderId/status", async (req, res) => {
         });
     }
 });
+
+
+// =====================================================
+// EXPORT
+// =====================================================
 
 module.exports = router;

@@ -373,8 +373,11 @@ export default function AddProduct() {
                       Dozen
                     </option>
 
-                    <option value="liter">
-                      Litre
+                    <option value="bunch">
+                      bunch
+                    </option>
+                    <option value="litre">
+                      litre(L)
                     </option>
                   </select>
 
