@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { API_BASE_URL } from "../../../lib/api";
 
 interface Product {
   product_id: number;
@@ -15,7 +16,7 @@ interface Product {
   status: string;
 }
 
-const API_URL = "http://localhost:5000/api/products";
+const API_URL = `${API_BASE_URL}/api/products`;
 
 const emptyForm = {
   product_name: "",
@@ -82,7 +83,7 @@ export default function FarmerProductsPage() {
 
       if (err instanceof TypeError) {
         setError(
-          "Cannot connect to backend. Make sure the backend is running on http://localhost:5000"
+          "Cannot connect to backend. Check the configured API server."
         );
       } else if (err instanceof Error) {
         setError(err.message);

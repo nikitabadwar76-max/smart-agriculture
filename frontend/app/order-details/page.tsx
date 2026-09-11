@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 interface Product {
@@ -33,7 +33,7 @@ interface Order {
   createdAt: string;
 }
 
-export default function OrderDetailsPage() {
+function OrderDetailsContent() {
 
   const searchParams =
     useSearchParams();
@@ -430,5 +430,13 @@ export default function OrderDetailsPage() {
       </section>
 
     </main>
+  );
+}
+
+export default function OrderDetailsPage() {
+  return (
+    <Suspense fallback={<main className="no-order-details" />}>
+      <OrderDetailsContent />
+    </Suspense>
   );
 }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { API_BASE_URL } from "../../../lib/api";
 
 export default function AddProduct() {
   const router = useRouter();
@@ -41,7 +42,7 @@ export default function AddProduct() {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/products",
+        `${API_BASE_URL}/api/products`,
         {
           method: "POST",
           headers: {

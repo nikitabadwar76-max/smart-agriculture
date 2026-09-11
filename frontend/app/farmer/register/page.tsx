@@ -3,8 +3,9 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import "./register.css";
+import { API_BASE_URL } from "../../../lib/api";
 
-const API_URL = "http://localhost:5000/api/farmers/register";
+const API_URL = `${API_BASE_URL}/api/farmers/register`;
 
 export default function FarmerRegisterPage() {
   const [form, setForm] = useState({

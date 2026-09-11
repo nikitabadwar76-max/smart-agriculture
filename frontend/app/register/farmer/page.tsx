@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { API_BASE_URL } from "../../../lib/api";
 
 export default function FarmerRegisterPage() {
     const router = useRouter();
@@ -48,7 +49,7 @@ export default function FarmerRegisterPage() {
 
         try {
             const response = await fetch(
-                "http://localhost:5000/api/farmers/register",
+                `${API_BASE_URL}/api/farmers/register`,
                 {
                     method: "POST",
                     headers: {

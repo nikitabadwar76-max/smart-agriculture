@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
+import { API_BASE_URL } from "../../../lib/api";
 
-const API_URL = "http://localhost:5000/api/customers/register";
+const API_URL = `${API_BASE_URL}/api/customers/register`;
 
 export default function CustomerRegisterPage() {
   const [form, setForm] = useState({

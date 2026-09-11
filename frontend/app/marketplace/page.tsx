@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { API_BASE_URL } from "../../lib/api";
 
 interface Product {
   product_id: number;
@@ -29,7 +30,7 @@ export default function MarketplacePage() {
       setError("");
 
       const response = await fetch(
-        "http://localhost:5000/api/products",
+        `${API_BASE_URL}/api/products`,
         {
           cache: "no-store",
         }

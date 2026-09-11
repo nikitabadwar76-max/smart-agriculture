@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { API_BASE_URL } from "../../lib/api";
 
 interface CartItem {
   product_id: number;
@@ -192,7 +193,7 @@ export default function CheckoutPage() {
       // =====================================================
 
       const response = await fetch(
-        "http://localhost:5000/api/orders",
+        `${API_BASE_URL}/api/orders`,
         {
           method: "POST",
 
