@@ -17,6 +17,7 @@ interface CartProduct {
 
 export default function CartPage() {
   const [cart, setCart] = useState<CartProduct[]>([]);
+  const [cartCount, setCartCount] = useState(0);
   const [loaded, setLoaded] = useState(false);
 
   // ==========================================
@@ -41,6 +42,15 @@ export default function CartPage() {
       setLoaded(true);
     }
   }, []);
+  useEffect(() => {
+  const count = cart.reduce(
+    (total: number, item: CartProduct) =>
+      total + Number(item.quantity || 0),
+    0
+  );
+
+  setCartCount(count);
+}, [cart]);
 
   // ==========================================
   // SAVE CART
@@ -184,28 +194,37 @@ export default function CartPage() {
 
       <header className="market-header">
 
-        <Link
-          href="/"
-          className="market-logo"
-        >
-          🌱 SmartAgri
-        </Link>
+        <Link href="/orders">
+  Orders
+</Link>
+
+<Link href="/profile">
+  Profile
+</Link>
 
         <nav>
 
           <Link href="/marketplace">
             Marketplace
           </Link>
+<Link href="/cart" className="market-active relative">
+  <span className="relative">
+    🛒
+    {cartCount > 0 && (
+      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+        {cartCount}
+      </span>
+    )}
+  </span>
+  <span>Cart</span>
+</Link>
 
-          <Link
-            href="/cart"
-            className="market-active"
-          >
-            🛒 Cart
+          <Link href="/orders">
+            Orders
           </Link>
 
-          <Link href="/login">
-            Login
+          <Link href="/profile">
+            Profile
           </Link>
 
         </nav>

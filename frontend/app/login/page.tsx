@@ -5,9 +5,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { API_BASE_URL } from "../../lib/api";
 
+type UserRole = "customer" | "farmer";
 export default function LoginPage() {
   const router = useRouter();
 
+  const [role, setRole] = useState<UserRole>("customer");
   const [mobile, setMobile] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -50,37 +52,104 @@ export default function LoginPage() {
         throw new Error(data.message || "Login failed.");
       }
 
-      if (data.customer) {
-        if (data.customer.customer_id) {
-          localStorage.setItem(
-            "customer_id",
-            String(data.customer.customer_id)
+      // =====================================================
+      // CUSTOMER LOGIN
+      // =====================================================
+
+      if (role === "customer") {
+        if (data.userType !== "customer" || !data.customer) {
+          throw new Error(
+            "This mobile number is not registered as a customer."
           );
         }
 
-        if (data.customer.customer_name) {
-          localStorage.setItem(
-            "customer_name",
-            data.customer.customer_name
-          );
-        }
+        const customer = data.customer;
 
-        if (data.customer.mobile) {
-          localStorage.setItem(
-            "customer_mobile",
-            data.customer.mobile
-          );
-        }
+        localStorage.setItem(
+          "user_role",
+          "customer"
+        );
+
+        localStorage.setItem(
+          "customer_id",
+          String(customer.customer_id)
+        );
+
+        localStorage.setItem(
+          "customer_name",
+          customer.customer_name || ""
+        );
+
+        localStorage.setItem(
+          "customer_mobile",
+          customer.mobile || ""
+        );
+
+        alert("✅ Customer login successful!");
+
+        router.push("/marketplace");
+        return;
       }
 
-      alert("✅ Login successful!");
+      // =====================================================
+      // FARMER LOGIN
+      // =====================================================
 
-      router.push("/marketplace");
+      if (role === "farmer") {
+        if (data.userType !== "farmer" || !data.farmer) {
+          throw new Error(
+            "This mobile number is not registered as a farmer."
+          );
+        }
+
+        const farmer = data.farmer;
+
+        localStorage.setItem(
+          "user_role",
+          "farmer"
+        );
+
+        localStorage.setItem(
+          "farmer_id",
+          String(farmer.farmer_id)
+        );
+
+        localStorage.setItem(
+          "farmer_name",
+          farmer.farmer_name || ""
+        );
+
+        localStorage.setItem(
+          "farmer_email",
+          farmer.email || ""
+        );
+
+        localStorage.setItem(
+          "farmer_mobile",
+          farmer.mobile || ""
+        );
+
+        localStorage.setItem(
+          "farmer_location",
+          farmer.location || ""
+        );
+
+        localStorage.setItem(
+          "farmer_address",
+          farmer.address || ""
+        );
+
+        alert("✅ Farmer login successful!");
+
+        router.push("/farmer/products");
+        return;
+      }
     } catch (error: any) {
       console.error("Login Error:", error);
 
       alert(
-        error?.message || "Something went wrong while logging in."
+        error?.message ||
+          "Something went wrong while logging in."
       );
     } finally {
       setLoading(false);
@@ -103,6 +172,7 @@ export default function LoginPage() {
 
       <section className="login-wrapper">
         <div className="login-card">
+
           <div className="login-icon">🔐</div>
 
           <div className="login-title">
@@ -115,7 +185,47 @@ export default function LoginPage() {
             </span>
           </div>
 
-          <form onSubmit={handleLogin} className="login-form">
+          {/* ROLE SELECTION */}
+
+          <div className="login-role-section">
+            <label>Login As</label>
+
+            <div className="login-role-buttons">
+
+              <button
+                type="button"
+                onClick={() => setRole("customer")}
+                className={
+                  role === "customer"
+                    ? "login-role-button active"
+                    : "login-role-button"
+                }
+              >
+                👤 Customer
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setRole("farmer")}
+                className={
+                  role === "farmer"
+                    ? "login-role-button active"
+                    : "login-role-button"
+                }
+              >
+                👨‍🌾 Farmer
+              </button>
+
+            </div>
+          </div>
+
+          <form
+            onSubmit={handleLogin}
+            className="login-form"
+          >
+
+            {/* MOBILE */}
+
             <div className="login-field">
               <label htmlFor="mobile">
                 Mobile Number
@@ -128,13 +238,17 @@ export default function LoginPage() {
                   id="mobile"
                   type="tel"
                   value={mobile}
-                  onChange={(e) => setMobile(e.target.value)}
+                  onChange={(e) =>
+                    setMobile(e.target.value)
+                  }
                   placeholder="Enter mobile number"
                   maxLength={10}
                   required
                 />
               </div>
             </div>
+
+            {/* PASSWORD */}
 
             <div className="login-field">
               <label htmlFor="password">
@@ -148,7 +262,9 @@ export default function LoginPage() {
                   id="password"
                   type="password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) =>
+                    setPassword(e.target.value)
+                  }
                   placeholder="Enter password"
                   required
                 />
@@ -166,17 +282,35 @@ export default function LoginPage() {
               disabled={loading}
               className="login-button"
             >
-              {loading ? "⏳ Logging in..." : "Login →"}
+              {loading
+                ? "⏳ Logging in..."
+                : `Login as ${
+                    role === "customer"
+                      ? "Customer"
+                      : "Farmer"
+                  } →`}
             </button>
+
           </form>
 
-          <div className="login-register">
-            <span>Don't have an account?</span>
+          {/* REGISTER */}
 
-            <Link href="/register/customer">
-              Create Account
-            </Link>
+          <div className="login-register">
+            <span>
+              Don't have an account?
+            </span>
+
+            {role === "customer" ? (
+              <Link href="/register/customer">
+                Create Customer Account
+              </Link>
+            ) : (
+              <Link href="/register/farmer">
+                Create Farmer Account
+              </Link>
+            )}
           </div>
+
         </div>
 
         <div className="login-trust">
@@ -186,6 +320,7 @@ export default function LoginPage() {
             Fresh products directly from local farmers
           </p>
         </div>
+
       </section>
     </main>
   );

@@ -23,6 +23,7 @@ export default function MarketplacePage() {
   const [category, setCategory] = useState("All");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [cartCount, setCartCount] = useState(0);
 
   const fetchProducts = async () => {
     try {
@@ -65,6 +66,29 @@ export default function MarketplacePage() {
   useEffect(() => {
     fetchProducts();
   }, []);
+  
+  useEffect(() => {
+  const savedCart = localStorage.getItem("cart");
+
+  if (!savedCart) {
+    setCartCount(0);
+    return;
+  }
+
+  try {
+    const cart = JSON.parse(savedCart);
+
+    const count = cart.reduce(
+      (total: number, item: any) =>
+        total + Number(item.quantity || 0),
+      0
+    );
+
+    setCartCount(count);
+  } catch {
+    setCartCount(0);
+  }
+}, []);
 
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
@@ -124,18 +148,28 @@ export default function MarketplacePage() {
             </Link>
 
             <Link
-              href="/cart"
-              className="text-gray-600 hover:text-green-600 font-medium"
-            >
-              🛒 Cart
-            </Link>
+  href="/cart"
+  className="relative ..."
+>
+  <span className="relative">
+    🛒
+    {cartCount > 0 && (
+      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+        {cartCount}
+      </span>
+    )}
+  </span>
+  <span>Cart</span>
+</Link>
 
             <Link
-              href="/login"
-              className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl font-semibold"
-            >
-              Login
-            </Link>
+  href="/profile"
+  className="text-gray-600 hover:text-green-600 font-medium"
+>
+  Profile
+</Link>
+
+          
 
           </div>
 
@@ -431,6 +465,13 @@ export default function MarketplacePage() {
                         "cart",
                         JSON.stringify(existingCart)
                       );
+                      const newCount = existingCart.reduce(
+  (total: number, item: Product) =>
+    total + Number(item.quantity || 0),
+  0
+);
+
+setCartCount(newCount);
 
                       alert(
                         `${product.product_name} added to cart!`
