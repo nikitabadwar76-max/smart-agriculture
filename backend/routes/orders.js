@@ -261,50 +261,6 @@ router.get("/customer/:customerId", async (req, res) => {
 
 
 // =====================================================
-// GET ALL ORDERS (ADMIN)
-// GET /api/orders
-// =====================================================
-
-router.get("/", async (req, res) => {
-    try {
-        const [orders] = await db.query(
-            `SELECT 
-                o.order_id,
-                o.customer_id,
-                c.customer_name,
-                c.mobile AS customer_mobile,
-                c.address AS customer_address,
-                o.total_amount,
-                o.order_status,
-                o.payment_status,
-                o.payment_method,
-                o.delivery_address,
-                o.order_date,
-                o.updated_at
-             FROM orders o
-             LEFT JOIN customers c
-                ON o.customer_id = c.customer_id
-             ORDER BY o.order_date DESC`
-        );
-
-        return res.json({
-            success: true,
-            orders
-        });
-
-    } catch (error) {
-        console.error("❌ Get all orders error:", error);
-
-        return res.status(500).json({
-            success: false,
-            message: "Failed to get orders",
-            error: error.message
-        });
-    }
-});
-
-
-// =====================================================
 // GET SINGLE ORDER
 // GET /api/orders/:orderId
 // =====================================================
@@ -501,44 +457,6 @@ router.put("/:orderId/status", async (req, res) => {
         return res.status(500).json({
             success: false,
             message: "Failed to update order status"
-        });
-    }
-});
-
-
-// =====================================================
-// DELETE ORDER (ADMIN)
-// DELETE /api/orders/:orderId
-// =====================================================
-
-router.delete("/:orderId", async (req, res) => {
-    const { orderId } = req.params;
-
-    try {
-        const [result] = await db.query(
-            "DELETE FROM orders WHERE order_id = ?",
-            [orderId]
-        );
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({
-                success: false,
-                message: "Order not found"
-            });
-        }
-
-        return res.json({
-            success: true,
-            message: "Order deleted successfully"
-        });
-
-    } catch (error) {
-        console.error("❌ Delete order error:", error);
-
-        return res.status(500).json({
-            success: false,
-            message: "Database error deleting order",
-            error: error.message
         });
     }
 });

@@ -87,43 +87,35 @@ router.post("/", async (req, res) => {
 
 
 // =====================================================
-// =====================================================
-// GET PRODUCTS (MARKETPLACE & ADMIN)
-// GET /api/products (?all=true for admin view)
+// GET ALL AVAILABLE PRODUCTS
+// GET /api/products
 // =====================================================
 
 router.get("/", async (req, res) => {
     try {
-        const isAll = req.query.all === "true";
+        console.log("GET /api/products called");
 
-        let sql = `
+        const [products] = await db.query(`
             SELECT
-                p.product_id,
-                p.farmer_id,
-                p.product_name,
-                p.category,
-                p.description,
-                p.price,
-                p.unit,
-                p.stock,
-                p.image_url,
-                p.status,
-                p.created_at,
-                p.updated_at,
-                f.farmer_name,
-                f.mobile AS farmer_mobile
-            FROM products p
-            LEFT JOIN farmers f
-                ON p.farmer_id = f.farmer_id
-        `;
+                product_id,
+                farmer_id,
+                product_name,
+                category,
+                description,
+                price,
+                unit,
+                stock,
+                image_url,
+                status,
+                created_at,
+                updated_at
+            FROM products
+            WHERE status = 'available'
+            AND stock > 0
+            ORDER BY created_at DESC
+        `);
 
-        if (!isAll) {
-            sql += ` WHERE p.status = 'available' AND p.stock > 0 `;
-        }
-
-        sql += ` ORDER BY p.created_at DESC `;
-
-        const [products] = await db.query(sql);
+        console.log("Products found:", products.length);
 
         return res.status(200).json({
             success: true,
@@ -132,7 +124,8 @@ router.get("/", async (req, res) => {
 
     } catch (error) {
         console.error("=================================");
-        console.error("GET PRODUCTS ERROR:", error);
+        console.error("GET PRODUCTS ERROR:");
+        console.error(error);
         console.error("=================================");
 
         return res.status(500).json({

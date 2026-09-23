@@ -5,6 +5,7 @@ import Link from "next/link";
 import { API_BASE_URL } from "../../lib/api";
 
 interface Product {
+  quantity: number;
   product_id: number;
   farmer_id: number;
   product_name: string;
