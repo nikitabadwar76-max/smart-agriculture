@@ -1,49 +1,365 @@
 "use client";
 
 import Link from "next/link";
-import * as navigation from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 
-export default function OrderSuccess() {
+interface OrderItem {
+  order_item_id: number;
+  order_id: number;
+  product_id: number;
+  farmer_id: number;
+  quantity: number;
+  price: string | number;
+  subtotal: string | number;
+  product_name?: string;
+  unit?: string;
+  image_url?: string | null;
+}
 
-  const searchParams =
-    navigation.useSearchParams();
+interface OrderDetails {
+  order_id: number;
+  customer_id: number;
+  customer_name?: string;
+  customer_mobile?: string;
+  customer_profile_address?: string;
+  total_amount: string | number;
+  order_status: string;
+  payment_status: string;
+  payment_method: string;
+  delivery_address: string;
+  order_date: string;
+  updated_at?: string;
+}
 
-  const orderId =
-    searchParams.get("orderId");
+function normalizePhoneNumber(rawPhone?: string | null): string | null {
+  if (!rawPhone) return null;
+  // Strip all non-digit characters
+  let digits = rawPhone.replace(/\D/g, "");
 
+  // Remove leading 0 if 11 digits (common in Indian landline/mobile dial format)
+  if (digits.length === 11 && digits.startsWith("0")) {
+    digits = digits.substring(1);
+  }
 
-  return (
+  // If 10 digits, prepend India country code 91
+  if (digits.length === 10) {
+    return `91${digits}`;
+  }
 
-    <main className="order-success-page">
+  // If 12 digits starting with 91, it's already well-formatted
+  if (digits.length === 12 && digits.startsWith("91")) {
+    return digits;
+  }
 
-      <header className="market-header">
+  // If it has at least 10 digits and seems valid, return digits
+  if (digits.length >= 10) {
+    return digits;
+  }
 
-        <Link
-          href="/"
-          className="market-logo"
-        >
-          🌱 SmartAgri
-        </Link>
+  return null;
+}
 
-        <nav>
+function formatOrderId(id: number | string): string {
+  const numericId = String(id).replace(/\D/g, "");
+  if (!numericId) return String(id);
+  return `FD${numericId.padStart(8, "0")}`;
+}
 
-          <Link href="/marketplace">
-            Marketplace
-          </Link>
+function formatDate(dateString?: string): string {
+  if (!dateString) return "";
+  try {
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return dateString;
+    return d.toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  } catch {
+    return dateString;
+  }
+}
 
-          <Link href="/login">
-            Login
-          </Link>
+function formatDateTime(dateString?: string): string {
+  if (!dateString) return "";
+  try {
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return dateString;
+    return d.toLocaleString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return dateString;
+  }
+}
 
-        </nav>
+function OrderSuccessContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
-      </header>
+  const queryOrderId = searchParams.get("orderId");
+  const [orderId, setOrderId] = useState<string | null>(queryOrderId);
 
+  const [order, setOrder] = useState<OrderDetails | null>(null);
+  const [items, setItems] = useState<OrderItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-      <section className="success-container">
+  const [whatsAppNotice, setWhatsAppNotice] = useState<string | null>(null);
+  const [isProcessingWhatsApp, setIsProcessingWhatsApp] = useState<boolean>(false);
 
-        <div className="success-icon">
-          ✓
+  // Determine effective order ID
+  useEffect(() => {
+    if (queryOrderId) {
+      setOrderId(queryOrderId);
+    } else {
+      const storedLastOrderId = localStorage.getItem("last_order_id");
+      if (storedLastOrderId) {
+        setOrderId(storedLastOrderId);
+      } else {
+        setLoading(false);
+      }
+    }
+  }, [queryOrderId]);
+
+  // Fetch actual order data from backend
+  const fetchOrder = async (idToFetch: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`http://localhost:5000/api/orders/${idToFetch}`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error("Order not found in the database.");
+        }
+        throw new Error("Unable to retrieve order details. Please check connection.");
+      }
+
+      const data = await response.json();
+      if (!data.success || !data.order) {
+        throw new Error(data.message || "Order information could not be loaded.");
+      }
+
+      setOrder(data.order);
+      setItems(Array.isArray(data.items) ? data.items : []);
+    } catch (err: any) {
+      console.error("❌ Order Success Fetch Error:", err);
+      setError(err?.message || "Failed to load order confirmation.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (orderId) {
+      fetchOrder(orderId);
+    }
+  }, [orderId]);
+
+  // WhatsApp receipt generator & sender
+  const handleSendWhatsAppReceipt = () => {
+    if (isProcessingWhatsApp) return;
+    setWhatsAppNotice(null);
+
+    if (!order) {
+      setWhatsAppNotice("Order details are still loading. Please wait a moment.");
+      return;
+    }
+
+    // Attempt to get customer mobile:
+    // 1. From backend order query (joined from customers table)
+    // 2. From localStorage "customer_mobile"
+    const rawMobile =
+      order.customer_mobile ||
+      localStorage.getItem("customer_mobile") ||
+      localStorage.getItem("customerMobile");
+
+    const normalizedPhone = normalizePhoneNumber(rawMobile);
+
+    if (!normalizedPhone) {
+      setWhatsAppNotice(
+        "Mobile number is not available. Please update your profile to send the receipt on WhatsApp."
+      );
+      return;
+    }
+
+    setIsProcessingWhatsApp(true);
+
+    try {
+      const displayOrderId = formatOrderId(order.order_id);
+      const customerName =
+        order.customer_name ||
+        localStorage.getItem("customer_name") ||
+        localStorage.getItem("customerName") ||
+        "Customer";
+      const formattedDateStr = formatDate(order.order_date) || "Today";
+      const deliveryAddress =
+        order.delivery_address ||
+        order.customer_profile_address ||
+        "Delivery Address";
+      const grandTotal = Number(order.total_amount).toFixed(0);
+
+      // Build product items list
+      const itemsList = items.map((item, index) => {
+        const pName = item.product_name || `Product #${item.product_id}`;
+        const qty = item.unit
+          ? `${item.quantity} ${item.unit}`
+          : `${item.quantity}`;
+        const itemPrice = Number(
+          item.subtotal || Number(item.price) * Number(item.quantity)
+        ).toFixed(0);
+
+        return `${index + 1}. ${pName}\n   Quantity: ${qty}\n   Price: ₹${itemPrice}`;
+      });
+
+      const messageParts: string[] = [
+        "🌱 *SmartAgri — Order Receipt*",
+        "",
+        "✅ *Order Confirmed*",
+        "",
+        `*Order ID:* ${displayOrderId}`,
+        `*Customer:* ${customerName}`,
+        `*Date:* ${formattedDateStr}`,
+        "",
+        "━━━━━━━━━━━━━━",
+        "🛒 *Order Details*",
+        "━━━━━━━━━━━━━━",
+        "",
+        itemsList.length > 0
+          ? itemsList.join("\n\n")
+          : "1. Fresh Farm Products\n   Quantity: 1\n   Price: ₹" + grandTotal,
+        "",
+        "━━━━━━━━━━━━━━",
+        `💰 *Total: ₹${grandTotal}*`,
+        "━━━━━━━━━━━━━━",
+        "",
+        "📍 *Delivery Address:*",
+        deliveryAddress,
+        "",
+        "🚜 Your order has been received.",
+        "The farmer will prepare your products and update the order status.",
+        "",
+        "Thank you for shopping with SmartAgri! 🌱",
+      ];
+
+      const fullMessage = messageParts.join("\n");
+      const encodedMessage = encodeURIComponent(fullMessage);
+      const whatsappUrl = `https://wa.me/${normalizedPhone}?text=${encodedMessage}`;
+
+      // Open WhatsApp in new window/tab
+      window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+    } catch (sendErr) {
+      console.error("WhatsApp generation error:", sendErr);
+      setWhatsAppNotice("Could not generate WhatsApp link. Please try again.");
+    } finally {
+      // Small timeout to reset click debounce
+      setTimeout(() => {
+        setIsProcessingWhatsApp(false);
+      }, 1200);
+    }
+  };
+
+  // -------------------------------------------------------------
+  // RENDER: MISSING ORDER ID
+  // -------------------------------------------------------------
+  if (!orderId && !loading) {
+    return (
+      <main className="min-h-screen bg-[#f7faf5] text-[#17251b]">
+        <Header />
+        <div className="max-w-2xl mx-auto px-4 py-16 text-center">
+          <div className="bg-white rounded-3xl p-10 shadow-sm border border-emerald-100">
+            <div className="w-20 h-20 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center text-4xl mx-auto mb-6">
+              📦
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-3">
+              No Order Specified
+            </h1>
+            <p className="text-gray-600 mb-8 max-w-md mx-auto">
+              We couldn’t find an active order ID to display. If you recently placed an order, you can check your orders list or visit the marketplace.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link
+                href="/marketplace"
+                className="px-6 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-md transition"
+              >
+                🛍 Continue Shopping
+              </Link>
+              <Link
+                href="/farmer/orders"
+                className="px-6 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition"
+              >
+                📄 View Orders
+              </Link>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // RENDER: LOADING SKELETON
+  // -------------------------------------------------------------
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-[#f7faf5] text-[#17251b]">
+        <Header />
+        <div className="max-w-3xl mx-auto px-4 py-12">
+          <div className="bg-white rounded-3xl p-8 sm:p-12 shadow-sm border border-emerald-100 animate-pulse text-center">
+            <div className="w-20 h-20 bg-emerald-100 rounded-full mx-auto mb-6"></div>
+            <div className="h-8 bg-gray-200 rounded-lg w-1/2 mx-auto mb-4"></div>
+            <div className="h-4 bg-gray-100 rounded w-3/4 mx-auto mb-8"></div>
+            <div className="space-y-4 max-w-md mx-auto">
+              <div className="h-16 bg-gray-100 rounded-2xl"></div>
+              <div className="h-28 bg-gray-100 rounded-2xl"></div>
+              <div className="h-14 bg-gray-200 rounded-2xl"></div>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // RENDER: ERROR STATE
+  // -------------------------------------------------------------
+  if (error || !order) {
+    return (
+      <main className="min-h-screen bg-[#f7faf5] text-[#17251b]">
+        <Header />
+        <div className="max-w-2xl mx-auto px-4 py-16 text-center">
+          <div className="bg-white rounded-3xl p-10 shadow-sm border border-red-100">
+            <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center text-4xl mx-auto mb-6">
+              ⚠️
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-3">
+              Unable to Load Order
+            </h1>
+            <p className="text-gray-600 mb-8 max-w-md mx-auto">
+              {error || "Something went wrong while loading your order confirmation."}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              {orderId && (
+                <button
+                  onClick={() => fetchOrder(orderId)}
+                  className="px-6 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-md transition cursor-pointer"
+                >
+                  🔄 Try Again
+                </button>
+              )}
+              <Link
+                href="/marketplace"
+                className="px-6 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition"
+              >
+                🛍 Back to Marketplace
+              </Link>
+            </div>
+          </div>
         </div>
       </main>
     );
@@ -397,14 +713,6 @@ export default function OrderSuccess() {
         </div>
       }
     >
-      <OrderSuccessContent />
-    </Suspense>
-  );
-}
-
-export default function OrderSuccess() {
-  return (
-    <Suspense fallback={<main className="order-success-page" />}>
       <OrderSuccessContent />
     </Suspense>
   );

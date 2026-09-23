@@ -3,6 +3,11 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 
+import { API_BASE_URL } from "../../../lib/api";
+
+import { useRouter } from "next/navigation";
+
+
 const API_URL = `${API_BASE_URL}/api/customers/register`;
 
 export default function CustomerRegisterPage() {

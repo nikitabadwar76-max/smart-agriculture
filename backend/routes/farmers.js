@@ -173,6 +173,46 @@ router.post("/login", async (req, res) => {
 
 
 // =====================================================
+// GET ALL FARMERS (ADMIN)
+// GET /api/farmers
+// =====================================================
+
+router.get("/", async (req, res) => {
+    try {
+        const [farmers] = await db.query(
+            `SELECT
+                farmer_id,
+                farmer_name,
+                email,
+                mobile,
+                location,
+                address,
+                profile_image,
+                status,
+                created_at,
+                updated_at
+             FROM farmers
+             ORDER BY farmer_id DESC`
+        );
+
+        return res.json({
+            success: true,
+            farmers
+        });
+
+    } catch (error) {
+        console.error("❌ Get all farmers error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Database error fetching farmers",
+            error: error.message
+        });
+    }
+});
+
+
+// =====================================================
 // GET FARMER PROFILE
 // GET /api/farmers/:id
 // =====================================================
@@ -215,6 +255,91 @@ router.get("/:id", async (req, res) => {
         return res.status(500).json({
             success: false,
             message: "Database error"
+        });
+    }
+});
+
+
+// =====================================================
+// UPDATE FARMER STATUS (ADMIN)
+// PUT /api/farmers/:id/status
+// =====================================================
+
+router.put("/:id/status", async (req, res) => {
+    const farmerId = req.params.id;
+    const { status } = req.body;
+
+    if (!status) {
+        return res.status(400).json({
+            success: false,
+            message: "Status is required (e.g. active, inactive)"
+        });
+    }
+
+    try {
+        const [result] = await db.query(
+            `UPDATE farmers
+             SET status = ?
+             WHERE farmer_id = ?`,
+            [status, farmerId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Farmer not found"
+            });
+        }
+
+        return res.json({
+            success: true,
+            message: `Farmer status updated to ${status}`
+        });
+
+    } catch (error) {
+        console.error("❌ Update farmer status error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Database error updating farmer status"
+        });
+    }
+});
+
+
+// =====================================================
+// DELETE FARMER (ADMIN)
+// DELETE /api/farmers/:id
+// =====================================================
+
+router.delete("/:id", async (req, res) => {
+    const farmerId = req.params.id;
+
+    try {
+        const [result] = await db.query(
+            "DELETE FROM farmers WHERE farmer_id = ?",
+            [farmerId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Farmer not found"
+            });
+        }
+
+        return res.json({
+            success: true,
+            message: "Farmer deleted successfully"
+        });
+
+    } catch (error) {
+        console.error("❌ Delete farmer error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Database error deleting farmer",
+            error: error.message
         });
     }
 });

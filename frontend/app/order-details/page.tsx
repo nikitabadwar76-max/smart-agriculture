@@ -509,3 +509,18 @@ function OrderDetailsContent() {
     </main>
   );
 }
+
+export default function OrderDetailsPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="no-order-details">
+          <div className="no-orders-icon">⏳</div>
+          <h1>Loading Order Details...</h1>
+        </main>
+      }
+    >
+      <OrderDetailsContent />
+    </Suspense>
+  );
+}
