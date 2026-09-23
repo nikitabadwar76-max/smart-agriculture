@@ -28,11 +28,20 @@ router.post("/", async (req, res) => {
         // VALIDATION
         // ---------------------------------------------
 
-        if (!mobile || !password) {
-            return res.status(400).json({
-                success: false,
-                message: "Mobile number and password are required"
-            });
+        if (role === "admin") {
+            if (!email || !password) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Email and password are required for admin login"
+                });
+            }
+        } else {
+            if (!mobile || !password) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Mobile number and password are required"
+                });
+            }
         }
 
         // =================================================

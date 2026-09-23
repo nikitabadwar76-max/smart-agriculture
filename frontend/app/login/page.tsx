@@ -215,6 +215,26 @@ const [email, setEmail] = useState("");
               </div>
             </div>
 
+            {/* EMAIL (Admin only) */}
+            {role === "admin" && (
+              <div className="login-field">
+                <label htmlFor="email">Admin Email</label>
+
+                <div className="login-input-wrapper">
+                  <span>📧</span>
+
+                  <input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter admin email"
+                    required
+                  />
+                </div>
+              </div>
+            )}
+
             {/* PASSWORD */}
             <div className="login-field">
               <label htmlFor="password">
