@@ -63,9 +63,16 @@ export default function CheckoutPage() {
         localStorage.getItem("customerName") ||
         "";
 
+      // Load customer mobile
+      const savedMobile =
+        localStorage.getItem("customer_mobile") ||
+        localStorage.getItem("customerMobile") ||
+        "";
+
       setFormData((previous) => ({
         ...previous,
         customer_name: savedName,
+        mobile: previous.mobile || savedMobile,
       }));
     } catch (error) {
       console.error("❌ Checkout loading error:", error);
@@ -276,11 +283,18 @@ export default function CheckoutPage() {
 
       setCart([]);
 
-      // Save order ID
+      // Save order ID and mobile
       if (data.order_id) {
         localStorage.setItem(
           "last_order_id",
           String(data.order_id)
+        );
+      }
+
+      if (formData.mobile.trim()) {
+        localStorage.setItem(
+          "customer_mobile",
+          formData.mobile.trim()
         );
       }
 
@@ -289,8 +303,12 @@ export default function CheckoutPage() {
         "🎉 Order placed successfully!"
       );
 
-      // Redirect
-      router.push("/order-success");
+      // Redirect with actual order ID
+      if (data.order_id) {
+        router.push(`/order-success?orderId=${data.order_id}`);
+      } else {
+        router.push("/order-success");
+      }
     } catch (error) {
       console.error(
         "❌ Place Order Error:",

@@ -141,13 +141,6 @@ export default function MarketplacePage() {
             </Link>
 
             <Link
-              href="/orders"
-              className="text-gray-600 hover:text-green-600 font-medium"
-            >
-              Orders
-            </Link>
-
-            <Link
   href="/cart"
   className="relative ..."
 >

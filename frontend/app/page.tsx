@@ -16,7 +16,6 @@ export default function Home() {
         <div className="nav-links">
           <Link href="/">Home</Link>
           <Link href="/marketplace">Marketplace</Link>
-          <Link href="/orders">Orders</Link>
           <Link href="/cart">Cart</Link>
           <Link href="/register/farmer">For Farmers</Link>
           <Link href="#how-it-works">How It Works</Link>
@@ -413,9 +412,9 @@ export default function Home() {
             <div className="product-image">
 
               <img
-                src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQdntGaxbsuazE6DFs3G8UaDbw1_hxVlLw39vzw-SB9ww&s=1024"
+                src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSE-X3yVP0ZgzFSUVqehgvMfoTK_ytYNJSRBscGkjaMEQ&s=10"
                 alt="Fresh Banana"
-              />
+              />s
 
               <span className="fresh-tag">
                 🌱 Fresh

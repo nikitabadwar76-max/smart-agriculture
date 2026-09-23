@@ -269,13 +269,31 @@ router.get("/:orderId", async (req, res) => {
 
     const { orderId } = req.params;
 
+    // Handle string IDs like FD00000022 or raw numeric IDs like 22
+    const numericId = String(orderId).replace(/\D/g, "");
+    const queryId = numericId ? Number(numericId) : orderId;
+
     try {
 
         const [orders] = await db.query(
-            `SELECT *
-             FROM orders
-             WHERE order_id = ?`,
-            [orderId]
+            `SELECT 
+                o.order_id,
+                o.customer_id,
+                c.customer_name,
+                c.mobile AS customer_mobile,
+                c.address AS customer_profile_address,
+                o.total_amount,
+                o.order_status,
+                o.payment_status,
+                o.payment_method,
+                o.delivery_address,
+                o.order_date,
+                o.updated_at
+             FROM orders o
+             LEFT JOIN customers c
+                ON o.customer_id = c.customer_id
+             WHERE o.order_id = ?`,
+            [queryId]
         );
 
         if (orders.length === 0) {
@@ -287,10 +305,22 @@ router.get("/:orderId", async (req, res) => {
         }
 
         const [items] = await db.query(
-            `SELECT *
-             FROM order_items
-             WHERE order_id = ?`,
-            [orderId]
+            `SELECT 
+                oi.order_item_id,
+                oi.order_id,
+                oi.product_id,
+                oi.farmer_id,
+                oi.quantity,
+                oi.price,
+                oi.subtotal,
+                p.product_name,
+                p.unit,
+                p.image_url
+             FROM order_items oi
+             LEFT JOIN products p
+                ON oi.product_id = p.product_id
+             WHERE oi.order_id = ?`,
+            [queryId]
         );
 
         return res.json({
@@ -326,27 +356,34 @@ router.get("/farmer/:farmerId", async (req, res) => {
     try {
 
         const [orders] = await db.query(
-            `SELECT
-                o.order_id,
-                o.customer_id,
-                o.total_amount,
-                o.order_status,
-                o.payment_status,
-                o.payment_method,
-                o.delivery_address,
-                o.order_date,
-                oi.product_id,
-                oi.quantity,
-                oi.price,
-                oi.subtotal
-             FROM orders o
-             INNER JOIN order_items oi
-                ON o.order_id = oi.order_id
-             WHERE oi.farmer_id = ?
-             ORDER BY o.order_date DESC`,
-            [farmerId]
-        );
-
+    `SELECT 
+        o.order_id,
+        o.customer_id,
+        c.customer_name,
+        c.mobile AS customer_mobile,
+        c.address AS customer_address,
+        o.total_amount,
+        o.order_status,
+        o.payment_status,
+        o.payment_method,
+        o.delivery_address,
+        o.order_date,
+        oi.product_id,
+        p.product_name,
+        oi.quantity,
+        oi.price,
+        oi.subtotal
+     FROM orders o
+     INNER JOIN customers c
+        ON o.customer_id = c.customer_id
+     INNER JOIN order_items oi
+        ON o.order_id = oi.order_id
+     INNER JOIN products p
+        ON oi.product_id = p.product_id
+     WHERE oi.farmer_id = ?
+     ORDER BY o.order_date DESC`,
+    [farmerId]
+);
         return res.json({
             success: true,
             orders
