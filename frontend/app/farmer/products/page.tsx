@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link"; 
 import { useEffect, useState } from "react";
 import { API_BASE_URL } from "../../../lib/api";
 
@@ -39,7 +38,9 @@ export default function FarmerProductsPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  const [editingProductId, setEditingProductId] = useState<number | null>(null);
+  const [editingProductId, setEditingProductId] = useState<number | null>(
+    null
+  );
 
   // ==========================================
   // FETCH PRODUCTS
@@ -50,19 +51,24 @@ export default function FarmerProductsPage() {
     setError("");
 
     try {
-      const response = await fetch(API_URL, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-        },
-        cache: "no-store",
-      });
+     const response = await fetch(`${API_URL}/farmer/my-products`, {
+  method: "GET",
+  headers: {
+    Accept: "application/json",
+    Authorization: `Bearer ${localStorage.getItem("token")}`,
+  },
+  cache: "no-store",
+});
 
       if (!response.ok) {
-        throw new Error(`Backend returned status ${response.status}`);
+        throw new Error(
+          `Backend returned status ${response.status}`
+        );
       }
 
       const data = await response.json();
+
+      console.log("✅ Products API response:", data);
 
       if (!data.success) {
         throw new Error(data.message || "Failed to fetch products");
@@ -131,15 +137,14 @@ export default function FarmerProductsPage() {
     try {
       const isEditing = editingProductId !== null;
 
-      const url = isEditing ? `${API_URL}/${editingProductId}` : API_URL;
+      const url = isEditing
+        ? `${API_URL}/${editingProductId}`
+        : API_URL;
 
       const method = isEditing ? "PUT" : "POST";
 
-      const farmerId = localStorage.getItem("farmer_id") || "1";
-
       const productData = {
-        farmer_id: Number(farmerId),
-        product_name: formData.product_name.trim(),
+  product_name: formData.product_name.trim(),
         category: formData.category,
         description: formData.description.trim(),
         price: Number(formData.price),
@@ -150,19 +155,24 @@ export default function FarmerProductsPage() {
 
       const response = await fetch(url, {
         method,
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
+       headers: {
+  "Content-Type": "application/json",
+  Accept: "application/json",
+  Authorization: `Bearer ${localStorage.getItem("token")}`,
+},
         body: JSON.stringify(productData),
       });
 
       const data = await response.json();
 
+      console.log("✅ Product operation response:", data);
+
       if (!response.ok || !data.success) {
         throw new Error(
           data.message ||
-            (isEditing ? "Failed to update product" : "Failed to add product")
+            (isEditing
+              ? "Failed to update product"
+              : "Failed to add product")
         );
       }
 
@@ -245,17 +255,19 @@ export default function FarmerProductsPage() {
     setError("");
 
     try {
-      const response = await fetch(`${API_URL}/${productId}`, {
-        method: "DELETE",
-        headers: {
-          Accept: "application/json",
-        },
-      });
-
+  const response = await fetch(`${API_URL}/${productId}`, {
+    method: "DELETE",
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+  });
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.message || "Failed to delete product");
+        throw new Error(
+          data.message || "Failed to delete product"
+        );
       }
 
       setMessage("🗑️ Product deleted successfully!");
@@ -277,43 +289,18 @@ export default function FarmerProductsPage() {
   };
 
   // ==========================================
-  // PAGE RENDER
+  // PAGE
   // ==========================================
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 py-10">
       <div className="max-w-7xl mx-auto px-6">
 
-        {/* TOP NAVIGATION BAR */}
-        <div className="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm mb-8 border border-gray-100">
-          <div className="flex gap-4">
-            <Link
-              href="/farmer/products"
-              className="font-bold text-green-700 bg-green-50 px-4 py-2 rounded-xl"
-            >
-              🌱 Manage Products
-            </Link>
-            <Link
-              href="/farmer/orders"
-              className="font-semibold text-gray-600 hover:text-green-700 px-4 py-2"
-            >
-              📦 Customer Orders
-            </Link>
-          </div>
-          <button
-            onClick={() => {
-              localStorage.clear();
-              window.location.href = "/login";
-            }}
-            className="text-red-600 text-sm font-semibold hover:underline cursor-pointer"
-          >
-            Logout
-          </button>
-        </div>
-
         {/* HEADER */}
         <div className="mb-10">
-          <p className="text-green-600 font-bold">🌱 FARMER DASHBOARD</p>
+          <p className="text-green-600 font-bold">
+            🌱 FARMER DASHBOARD
+          </p>
 
           <h1 className="text-4xl font-extrabold text-gray-800 mt-2">
             My Products
@@ -326,6 +313,7 @@ export default function FarmerProductsPage() {
 
         {/* FORM */}
         <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8 mb-12">
+
           <div className="flex items-center gap-3 mb-7">
             <div className="w-12 h-12 rounded-2xl bg-green-100 flex items-center justify-center text-2xl">
               {editingProductId !== null ? "✏️" : "🌱"}
@@ -345,6 +333,7 @@ export default function FarmerProductsPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+
             {/* NAME */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -364,6 +353,7 @@ export default function FarmerProductsPage() {
 
             {/* CATEGORY + UNIT */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Category
@@ -401,10 +391,12 @@ export default function FarmerProductsPage() {
                   <option value="liter">Liter</option>
                 </select>
               </div>
+
             </div>
 
             {/* PRICE + STOCK */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Price (₹)
@@ -440,6 +432,7 @@ export default function FarmerProductsPage() {
                   className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-green-500"
                 />
               </div>
+
             </div>
 
             {/* DESCRIPTION */}
@@ -489,10 +482,11 @@ export default function FarmerProductsPage() {
 
             {/* BUTTONS */}
             <div className="flex flex-col md:flex-row gap-3">
+
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-bold py-4 rounded-xl transition cursor-pointer"
+                className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-bold py-4 rounded-xl transition"
               >
                 {loading
                   ? editingProductId !== null
@@ -507,18 +501,21 @@ export default function FarmerProductsPage() {
                 <button
                   type="button"
                   onClick={handleCancelEdit}
-                  className="md:w-40 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-4 rounded-xl cursor-pointer"
+                  className="md:w-40 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-4 rounded-xl"
                 >
                   Cancel
                 </button>
               )}
+
             </div>
           </form>
         </div>
 
-        {/* PRODUCTS LIST */}
+        {/* PRODUCTS */}
         <div>
+
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+
             <div>
               <h2 className="text-2xl font-bold text-gray-800">
                 📦 My Products
@@ -532,17 +529,20 @@ export default function FarmerProductsPage() {
             <span className="bg-green-100 text-green-700 px-5 py-2 rounded-full font-bold">
               {products.length} Products
             </span>
+
           </div>
 
           {/* ERROR */}
           {error && products.length === 0 && !fetching && (
             <div className="bg-red-50 border border-red-200 rounded-2xl p-6 mb-6">
-              <p className="text-red-700 font-semibold">❌ {error}</p>
+              <p className="text-red-700 font-semibold">
+                ❌ {error}
+              </p>
 
               <button
                 type="button"
                 onClick={fetchProducts}
-                className="mt-4 bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg font-semibold cursor-pointer"
+                className="mt-4 bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg font-semibold"
               >
                 🔄 Try Again
               </button>
@@ -558,8 +558,11 @@ export default function FarmerProductsPage() {
               </p>
             </div>
           ) : products.length === 0 ? (
+
             <div className="bg-white rounded-2xl p-12 text-center shadow">
-              <div className="text-6xl mb-4">🥕</div>
+              <div className="text-6xl mb-4">
+                🥕
+              </div>
 
               <h3 className="text-xl font-bold text-gray-700">
                 No products found
@@ -569,15 +572,21 @@ export default function FarmerProductsPage() {
                 Add your first farm product above.
               </p>
             </div>
+
           ) : (
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
               {products.map((product) => (
+
                 <div
                   key={product.product_id}
                   className="bg-white rounded-3xl shadow-md overflow-hidden hover:shadow-xl transition duration-300"
                 >
+
                   {/* IMAGE */}
                   <div className="h-52 bg-gray-100">
+
                     {product.image_url ? (
                       <img
                         src={product.image_url}
@@ -589,10 +598,12 @@ export default function FarmerProductsPage() {
                         🌱
                       </div>
                     )}
+
                   </div>
 
                   {/* DETAILS */}
                   <div className="p-6">
+
                     <span className="inline-block bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-bold">
                       {product.category}
                     </span>
@@ -606,6 +617,7 @@ export default function FarmerProductsPage() {
                     </p>
 
                     <div className="flex justify-between items-end mt-5">
+
                       <div>
                         <div className="text-2xl font-extrabold text-green-700">
                           ₹{Number(product.price).toFixed(2)}
@@ -617,12 +629,15 @@ export default function FarmerProductsPage() {
                       </div>
 
                       <div className="text-right">
-                        <div className="text-sm text-gray-400">Stock</div>
+                        <div className="text-sm text-gray-400">
+                          Stock
+                        </div>
 
                         <div className="font-bold text-gray-700">
                           {product.stock} {product.unit}
                         </div>
                       </div>
+
                     </div>
 
                     {/* STATUS */}
@@ -640,10 +655,11 @@ export default function FarmerProductsPage() {
 
                     {/* BUTTONS */}
                     <div className="flex gap-3 mt-5">
+
                       <button
                         type="button"
                         onClick={() => handleEdit(product)}
-                        className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-3 rounded-xl transition cursor-pointer"
+                        className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-3 rounded-xl transition"
                       >
                         ✏️ Edit
                       </button>
@@ -651,16 +667,22 @@ export default function FarmerProductsPage() {
                       <button
                         type="button"
                         onClick={() => handleDelete(product.product_id)}
-                        className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-bold py-3 rounded-xl transition cursor-pointer"
+                        className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-bold py-3 rounded-xl transition"
                       >
                         🗑️ Delete
                       </button>
+
                     </div>
+
                   </div>
                 </div>
+
               ))}
+
             </div>
+
           )}
+
         </div>
       </div>
     </main>

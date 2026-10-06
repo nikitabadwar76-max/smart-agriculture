@@ -3,6 +3,7 @@ const bcrypt = require("bcryptjs");
 
 const router = express.Router();
 const db = require("../db");
+const auth = require("../middleware/auth");
 
 // =====================================================
 // FARMER REGISTER
@@ -217,7 +218,7 @@ router.get("/", async (req, res) => {
 // GET /api/farmers/:id
 // =====================================================
 
-router.get("/:id", async (req, res) => {
+router.get("/:id", auth, async (req, res) => {
     const farmerId = req.params.id;
 
     try {

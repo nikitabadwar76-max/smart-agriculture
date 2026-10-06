@@ -1,233 +1,119 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 const db = require("../db");
 
 const router = express.Router();
 
-// =====================================================
-// LOGIN
-// POST /api/login
-// Farmer OR Customer
-// Mobile + Password
-// =====================================================
-
 router.post("/", async (req, res) => {
-    try {
-        const mobile = String(req.body.mobile || "").trim();
-        const password = String(req.body.password || "");
+  const { mobile, password } = req.body;
 
-        console.log("=================================");
-        console.log("🔐 LOGIN REQUEST");
-        console.log("Mobile:", mobile);
-        console.log("Password received:", password ? "YES" : "NO");
-        console.log("=================================");
+  try {
+    // Check farmer
+    const [farmers] = await db.query(
+      "SELECT * FROM farmers WHERE mobile = ?",
+      [mobile]
+    );
 
-        // ---------------------------------------------
-        // VALIDATION
-        // ---------------------------------------------
+    if (farmers.length > 0) {
+      const farmer = farmers[0];
 
-        if (!mobile || !password) {
-            return res.status(400).json({
-                success: false,
-                message: "Mobile number and password are required"
-            });
-        }
+      const passwordMatch = await bcrypt.compare(
+        password,
+        farmer.password
+      );
 
-        // =================================================
-        // CHECK ADMIN LOGIN
-        // =================================================
-        const role = String(req.body.role || "").toLowerCase();
-        if (role === "admin" || mobile.toLowerCase() === "admin") {
-            const adminUser = process.env.ADMIN_USER || "admin";
-            const adminPass = process.env.ADMIN_PASSWORD || "admin123";
-
-            if (
-                (mobile.toLowerCase() === adminUser.toLowerCase() || mobile.toLowerCase() === "admin") &&
-                (password === adminPass || password === "admin")
-            ) {
-                return res.status(200).json({
-                    success: true,
-                    message: "Admin login successful",
-                    userType: "admin",
-                    admin: {
-                        name: "Administrator",
-                        username: "admin"
-                    }
-                });
-            } else {
-                return res.status(401).json({
-                    success: false,
-                    message: "Invalid admin credentials"
-                });
-            }
-        }
-
-        // =================================================
-        // CHECK FARMER
-        // =================================================
-
-        const [farmers] = await db.query(
-            `SELECT
-                farmer_id,
-                farmer_name,
-                email,
-                mobile,
-                password,
-                location,
-                address,
-                status
-             FROM farmers
-             WHERE mobile = ?
-             LIMIT 1`,
-            [mobile]
-        );
-
-        console.log("👨‍🌾 Farmers found:", farmers.length);
-
-        // =================================================
-        // FARMER FOUND
-        // =================================================
-
-        if (farmers.length > 0) {
-            const farmer = farmers[0];
-
-            console.log("👨‍🌾 Farmer:", farmer.farmer_name);
-            console.log("📱 DB Mobile:", farmer.mobile);
-            console.log("🔑 Hash exists:", !!farmer.password);
-            console.log(
-                "🔑 Hash starts with $2b$:",
-                farmer.password?.startsWith("$2b$")
-            );
-
-            // Check status
-            if (
-                farmer.status &&
-                farmer.status.toLowerCase() !== "active"
-            ) {
-                return res.status(403).json({
-                    success: false,
-                    message: "Farmer account is not active"
-                });
-            }
-
-            // ---------------------------------------------
-            // PASSWORD CHECK
-            // ---------------------------------------------
-
-            const passwordMatch = await bcrypt.compare(
-                password,
-                farmer.password
-            );
-
-            console.log(
-                "🔐 Password match:",
-                passwordMatch
-            );
-
-            if (!passwordMatch) {
-                return res.status(401).json({
-                    success: false,
-                    message: "Invalid mobile number or password"
-                });
-            }
-
-            console.log(
-                "✅ FARMER LOGIN SUCCESS:",
-                farmer.farmer_name
-            );
-
-            return res.status(200).json({
-                success: true,
-                message: "Farmer login successful",
-                userType: "farmer",
-                farmer: {
-                    farmer_id: farmer.farmer_id,
-                    farmer_name: farmer.farmer_name,
-                    email: farmer.email,
-                    mobile: farmer.mobile,
-                    location: farmer.location,
-                    address: farmer.address
-                }
-            });
-        }
-
-        // =================================================
-        // CHECK CUSTOMER
-        // =================================================
-
-        const [customers] = await db.query(
-            `SELECT
-                customer_id,
-                customer_name,
-                mobile,
-                password
-             FROM customers
-             WHERE mobile = ?
-             LIMIT 1`,
-            [mobile]
-        );
-
-        console.log(
-            "👤 Customers found:",
-            customers.length
-        );
-
-        // =================================================
-        // CUSTOMER NOT FOUND
-        // =================================================
-
-        if (customers.length === 0) {
-            return res.status(401).json({
-                success: false,
-                message: "Invalid mobile number or password"
-            });
-        }
-
-        const customer = customers[0];
-
-        // ---------------------------------------------
-        // CUSTOMER PASSWORD
-        // ---------------------------------------------
-
-        const customerPasswordMatch =
-            await bcrypt.compare(
-                password,
-                customer.password
-            );
-
-        if (!customerPasswordMatch) {
-            return res.status(401).json({
-                success: false,
-                message: "Invalid mobile number or password"
-            });
-        }
-
-        console.log(
-            "✅ CUSTOMER LOGIN SUCCESS:",
-            customer.customer_name
-        );
-
-        return res.status(200).json({
-            success: true,
-            message: "Customer login successful",
-            userType: "customer",
-            customer: {
-                customer_id: customer.customer_id,
-                customer_name: customer.customer_name,
-                mobile: customer.mobile
-            }
+      if (!passwordMatch) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid mobile number or password.",
         });
+      }
 
-    } catch (error) {
+      const token = jwt.sign(
+        {
+          id: farmer.farmer_id,
+          role: "farmer",
+        },
+        process.env.JWT_SECRET,
+        {
+          expiresIn: "1d",
+        }
+      );
 
-        console.error("❌ LOGIN ERROR:", error);
-
-        return res.status(500).json({
-            success: false,
-            message: "Database error during login",
-            error: error.message
-        });
+      return res.json({
+        success: true,
+        message: "Farmer login successful.",
+        token,
+        userType: "farmer",
+        farmer: {
+          farmer_id: farmer.farmer_id,
+          farmer_name: farmer.farmer_name,
+          email: farmer.email,
+          mobile: farmer.mobile,
+          location: farmer.location,
+          address: farmer.address,
+        },
+      });
     }
+
+    // Check customer
+    const [customers] = await db.query(
+      "SELECT * FROM customers WHERE mobile = ?",
+      [mobile]
+    );
+
+    if (customers.length > 0) {
+      const customer = customers[0];
+
+      const passwordMatch = await bcrypt.compare(
+        password,
+        customer.password
+      );
+
+      if (!passwordMatch) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid mobile number or password.",
+        });
+      }
+
+      const token = jwt.sign(
+        {
+          id: customer.customer_id,
+          role: "customer",
+        },
+        process.env.JWT_SECRET,
+        {
+          expiresIn: "1d",
+        }
+      );
+
+      return res.json({
+        success: true,
+        message: "Customer login successful.",
+        token,
+        userType: "customer",
+        customer: {
+          customer_id: customer.customer_id,
+          customer_name: customer.customer_name,
+          mobile: customer.mobile,
+        },
+      });
+    }
+
+    return res.status(401).json({
+      success: false,
+      message: "Invalid mobile number or password.",
+    });
+  } catch (error) {
+    console.error("Login Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error during login.",
+    });
+  }
 });
 
 module.exports = router;

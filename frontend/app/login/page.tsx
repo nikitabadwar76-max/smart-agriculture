@@ -49,6 +49,13 @@ export default function LoginPage() {
       if (!response.ok || !data.success) {
         throw new Error(data.message || "Login failed.");
       }
+      if (data.token) {
+  localStorage.setItem("token", data.token);
+}
+
+if (data.userType) {
+  localStorage.setItem("user_role", data.userType);
+}
 
       if (data.customer) {
         if (data.customer.customer_id) {

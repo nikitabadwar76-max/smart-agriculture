@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 interface Product {
@@ -44,107 +44,79 @@ function OrderDetailsContent() {
 
   const [order, setOrder] =
     useState<Order | null>(null);
-  const [loading, setLoading] =
-    useState<boolean>(true);
 
 
   useEffect(() => {
 
-    const effectiveOrderId =
-      orderId || localStorage.getItem("last_order_id");
+  const fetchOrder = async () => {
 
-    const savedOrder =
-      localStorage.getItem("lastOrder");
+    if (!orderId) {
+      return;
+    }
 
-    if (savedOrder) {
-      try {
-        const parsedOrder =
-          JSON.parse(savedOrder);
+    try {
 
-        if (
-          !effectiveOrderId ||
-          parsedOrder.orderId === effectiveOrderId
-        ) {
-          setOrder(parsedOrder);
-          setLoading(false);
-          return;
+      const token = localStorage.getItem("token");
+
+      const response = await fetch(
+        `http://localhost:5000/api/orders/${orderId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
-      } catch (e) {
-        console.error("Error parsing lastOrder:", e);
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+
+        const backendOrder = data.order;
+
+        setOrder({
+          orderId: String(backendOrder.order_id),
+          customer: {
+            name: "",
+            phone: "",
+            address: backendOrder.delivery_address || "",
+            city: "",
+            pincode: "",
+          },
+          products: data.items.map((item: any) => ({
+            id: item.product_id,
+            name: `Product ${item.product_id}`,
+            price: Number(item.price),
+            unit: "",
+            quantity: Number(item.quantity),
+            emoji: "🥬",
+          })),
+          subtotal: Number(backendOrder.total_amount),
+          deliveryCharge: 0,
+          total: Number(backendOrder.total_amount),
+          paymentMethod: backendOrder.payment_method,
+          status: backendOrder.order_status,
+          createdAt: backendOrder.order_date,
+        });
+
+      } else {
+
+        setOrder(null);
+
       }
+
+    } catch (error) {
+
+      console.error("Failed to fetch order:", error);
+
+      setOrder(null);
+
     }
 
-    if (effectiveOrderId) {
-      fetch(`http://localhost:5000/api/orders/${effectiveOrderId}`)
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (data && data.success && data.order) {
-            const mappedProducts: Product[] = (data.items || []).map(
-              (it: any) => ({
-                id: it.product_id,
-                name: it.product_name || `Product #${it.product_id}`,
-                price: Number(it.price),
-                unit: it.unit || "unit",
-                quantity: Number(it.quantity),
-                emoji: "🌱",
-              })
-            );
+  };
 
-            const total = Number(data.order.total_amount);
-            const subtotal = mappedProducts.reduce(
-              (acc, p) => acc + p.price * p.quantity,
-              0
-            );
-            const deliveryCharge =
-              total > subtotal ? total - subtotal : 0;
+  fetchOrder();
 
-            setOrder({
-              orderId: String(data.order.order_id),
-              customer: {
-                name: data.order.customer_name || "Customer",
-                phone: data.order.customer_mobile || "",
-                address: data.order.delivery_address || "",
-                city: "",
-                pincode: "",
-              },
-              products: mappedProducts,
-              subtotal: subtotal > 0 ? subtotal : total,
-              deliveryCharge,
-              total,
-              paymentMethod: (data.order.payment_method || "")
-                .toLowerCase()
-                .includes("cash")
-                ? "cod"
-                : "online",
-              status: data.order.order_status || "Pending",
-              createdAt:
-                data.order.order_date || new Date().toISOString(),
-            });
-          }
-        })
-        .catch((err) =>
-          console.error("Failed to fetch order in order-details:", err)
-        )
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
-
-  }, [orderId]);
-
-
-  if (loading) {
-    return (
-      <main className="no-order-details">
-        <div className="no-orders-icon">
-          ⏳
-        </div>
-        <h1>
-          Loading Order Details...
-        </h1>
-      </main>
-    );
-  }
+}, [orderId]);
 
 
   if (!order) {
@@ -166,11 +138,11 @@ function OrderDetailsContent() {
         </p>
 
         <Link
-          href="/farmer/orders"
-          className="continue-shopping"
-        >
-          Back to Orders
-        </Link>
+  href="/orders"
+  className="continue-shopping"
+>
+  Back to Orders
+</Link>
 
       </main>
 
@@ -512,14 +484,7 @@ function OrderDetailsContent() {
 
 export default function OrderDetailsPage() {
   return (
-    <Suspense
-      fallback={
-        <main className="no-order-details">
-          <div className="no-orders-icon">⏳</div>
-          <h1>Loading Order Details...</h1>
-        </main>
-      }
-    >
+    <Suspense fallback={<main className="no-order-details" />}>
       <OrderDetailsContent />
     </Suspense>
   );

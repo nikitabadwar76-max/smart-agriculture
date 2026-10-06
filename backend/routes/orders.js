@@ -2,13 +2,14 @@ const express = require("express");
 
 const router = express.Router();
 const db = require("../db");
+const auth = require("../middleware/auth");
 
 // =====================================================
 // PLACE NEW ORDER
 // POST /api/orders
 // =====================================================
 
-router.post("/", async (req, res) => {
+ router.post("/", auth, async (req, res) => {
     const {
         customer_id,
         total_amount,
@@ -226,9 +227,15 @@ router.post("/", async (req, res) => {
 // GET /api/orders/customer/:customerId
 // =====================================================
 
-router.get("/customer/:customerId", async (req, res) => {
+router.get("/customer/:customerId", auth, async (req, res) => {
 
     const { customerId } = req.params;
+    if (req.user.role !== "customer" || req.user.id != customerId) {
+  return res.status(403).json({
+    success: false,
+    message: "Access denied.",
+  });
+}
 
     try {
 
@@ -309,7 +316,7 @@ router.get("/", async (req, res) => {
 // GET /api/orders/:orderId
 // =====================================================
 
-router.get("/:orderId", async (req, res) => {
+router.get("/:orderId", auth, async (req, res) => {
 
     const { orderId } = req.params;
 
@@ -393,9 +400,15 @@ router.get("/:orderId", async (req, res) => {
 // GET /api/orders/farmer/:farmerId
 // =====================================================
 
-router.get("/farmer/:farmerId", async (req, res) => {
+router.get("/farmer/:farmerId", auth, async (req, res) => {
 
     const { farmerId } = req.params;
+    if (req.user.role !== "farmer" || req.user.id != farmerId) {
+    return res.status(403).json({
+        success: false,
+        message: "Access denied."
+    });
+}
 
     try {
 
@@ -453,7 +466,7 @@ router.get("/farmer/:farmerId", async (req, res) => {
 // PUT /api/orders/:orderId/status
 // =====================================================
 
-router.put("/:orderId/status", async (req, res) => {
+router.put("/:orderId/status", auth, async (req, res) => {
 
     const { orderId } = req.params;
     const { order_status } = req.body;
@@ -469,14 +482,18 @@ router.put("/:orderId/status", async (req, res) => {
     try {
 
         const [result] = await db.query(
-            `UPDATE orders
-             SET order_status = ?
-             WHERE order_id = ?`,
-            [
-                order_status,
-                orderId
-            ]
-        );
+    `UPDATE orders o
+     INNER JOIN order_items oi
+        ON o.order_id = oi.order_id
+     SET o.order_status = ?
+     WHERE o.order_id = ?
+     AND oi.farmer_id = ?`,
+    [
+        order_status,
+        orderId,
+        req.user.id
+    ]
+);
 
         if (result.affectedRows === 0) {
 

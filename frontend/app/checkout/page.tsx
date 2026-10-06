@@ -200,17 +200,18 @@ export default function CheckoutPage() {
       // =====================================================
 
       const response = await fetch(
-        `${API_BASE_URL}/api/orders`,
-        {
-          method: "POST",
+  `${API_BASE_URL}/api/orders`,
+  {
+    method: "POST",
 
-          headers: {
-            "Content-Type": "application/json",
-          },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
 
-          body: JSON.stringify(orderData),
-        }
-      );
+    body: JSON.stringify(orderData),
+  }
+);
 
       // =====================================================
       // GET RAW RESPONSE

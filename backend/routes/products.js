@@ -2,16 +2,16 @@ const express = require("express");
 
 const router = express.Router();
 const db = require("../db");
+const auth = require("../middleware/auth");
 
 // =====================================================
 // ADD PRODUCT
 // POST /api/products
 // =====================================================
 
-router.post("/", async (req, res) => {
+router.post("/", auth, async (req, res) => {
     try {
         const {
-            farmer_id,
             product_name,
             category,
             description,
@@ -22,7 +22,6 @@ router.post("/", async (req, res) => {
         } = req.body;
 
         if (
-            !farmer_id ||
             !product_name ||
             !category ||
             price === undefined ||
@@ -58,7 +57,7 @@ router.post("/", async (req, res) => {
         `;
 
         const [result] = await db.query(sql, [
-            farmer_id,
+            req.user.id,
             product_name,
             category,
             description || null,
@@ -91,7 +90,37 @@ router.post("/", async (req, res) => {
 // GET PRODUCTS (MARKETPLACE & ADMIN)
 // GET /api/products (?all=true for admin view)
 // =====================================================
+router.get("/farmer/my-products", auth, async (req, res) => {
+  try {
+    if (req.user.role !== "farmer") {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied.",
+      });
+    }
 
+    const [products] = await db.query(
+      `SELECT product_id, farmer_id, product_name, category,
+              description, price, unit, stock, image_url,
+              status, created_at, updated_at
+       FROM products
+       WHERE farmer_id = ?
+       ORDER BY product_id DESC`,
+      [req.user.id]
+    );
+
+    res.json({
+      success: true,
+      products,
+    });
+  } catch (error) {
+    console.error("Farmer Products Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch farmer products.",
+    });
+  }
+});
 router.get("/", async (req, res) => {
     try {
         const isAll = req.query.all === "true";
@@ -142,6 +171,7 @@ router.get("/", async (req, res) => {
         });
     }
 });
+
 
 // =====================================================
 // GET SINGLE PRODUCT
@@ -203,7 +233,7 @@ router.get("/:id", async (req, res) => {
 // PUT /api/products/:id
 // =====================================================
 
-router.put("/:id", async (req, res) => {
+router.put("/:id", auth, async (req, res) => {
     try {
         const productId = req.params.id;
 
@@ -251,6 +281,7 @@ router.put("/:id", async (req, res) => {
                 image_url = ?,
                 status = ?
             WHERE product_id = ?
+            AND farmer_id = ?
             `,
             [
                 product_name,
@@ -261,14 +292,15 @@ router.put("/:id", async (req, res) => {
                 stock,
                 image_url || null,
                 status || "available",
-                productId
+                productId,
+                req.user.id
             ]
         );
 
         if (result.affectedRows === 0) {
             return res.status(404).json({
                 success: false,
-                message: "Product not found"
+                message: "Product not found or access denied"
             });
         }
 
@@ -294,7 +326,7 @@ router.put("/:id", async (req, res) => {
 // DELETE /api/products/:id
 // =====================================================
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", auth, async (req, res) => {
     try {
         const productId = req.params.id;
 
@@ -302,14 +334,15 @@ router.delete("/:id", async (req, res) => {
             `
             DELETE FROM products
             WHERE product_id = ?
+            AND farmer_id = ?
             `,
-            [productId]
+            [productId, req.user.id]
         );
 
         if (result.affectedRows === 0) {
             return res.status(404).json({
                 success: false,
-                message: "Product not found"
+                message: "Product not found or access denied"
             });
         }
 

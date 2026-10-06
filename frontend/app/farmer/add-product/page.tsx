@@ -41,24 +41,38 @@ export default function AddProduct() {
     setError("");
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/products`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            farmer_id: 1,
-            product_name: formData.product_name,
-            category: formData.category,
-            description: formData.description,
-            price: Number(formData.price),
-            unit: formData.unit,
-            stock: Number(formData.stock),
-            image_url: formData.image_url || null,
-          }),
-        }
+  const response = await fetch(
+    `${API_BASE_URL}/api/products`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+      body: JSON.stringify({
+        product_name: formData.product_name,
+        category: formData.category,
+        description: formData.description,
+        price: Number(formData.price),
+        unit: formData.unit,
+        stock: Number(formData.stock),
+        image_url: formData.image_url || null,
+      }),
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok || !data.success) {
+    throw new Error(
+      data.message ||
+        (isEditing
+          ? "Failed to update product"
+          : "Failed to add product")
+    );
+  }
+
+  // rest of your existing code continues here
       );
 
       const data = await response.json();
