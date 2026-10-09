@@ -14,6 +14,7 @@ const productsRoutes = require("./routes/products");
 const farmerRoutes = require("./routes/farmers");
 const customersRoutes = require("./routes/customers");
 const loginRoutes = require("./routes/login");
+const feedbackRoutes = require("./routes/feedback");
 
 // API Routes
 app.use("/api/orders", ordersRoutes);
@@ -21,6 +22,7 @@ app.use("/api/products", productsRoutes);
 app.use("/api/farmers", farmerRoutes);
 app.use("/api/customers", customersRoutes);
 app.use("/api/login", loginRoutes);
+app.use("/api/feedback", feedbackRoutes);
 
 // Test Route
 app.get("/", (req, res) => {

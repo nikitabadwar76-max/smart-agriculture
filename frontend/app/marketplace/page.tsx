@@ -396,6 +396,12 @@ export default function MarketplacePage() {
                   <h3 className="text-xl font-bold text-gray-800 mt-3">
                     {product.product_name}
                   </h3>
+                  <Link
+  href={`/products/${product.product_id}`}
+  className="inline-block mt-3 text-green-700 font-bold hover:underline"
+>
+  View Details & Reviews →
+</Link>
 
 
                   <p className="text-gray-500 text-sm mt-2 min-h-[40px]">
