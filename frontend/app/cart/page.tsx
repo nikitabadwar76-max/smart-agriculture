@@ -193,15 +193,7 @@ export default function CartPage() {
 
       <header className="market-header">
 
-        <Link href="/orders">
-  Orders
-</Link>
-
-<Link href="/profile">
-  Profile
-</Link>
-
-        <nav>
+  <nav>
 
           <Link href="/marketplace">
             Marketplace

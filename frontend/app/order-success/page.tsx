@@ -132,7 +132,16 @@ function OrderSuccessContent() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`http://localhost:5000/api/orders/${idToFetch}`);
+      const token = localStorage.getItem("token");
+
+const response = await fetch(
+  `http://localhost:5000/api/orders/${idToFetch}`,
+  {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }
+);
       if (!response.ok) {
         if (response.status === 404) {
           throw new Error("Order not found in the database.");
