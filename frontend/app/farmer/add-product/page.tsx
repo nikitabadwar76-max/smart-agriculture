@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -27,13 +28,15 @@ export default function AddProduct() {
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >
   ) => {
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       [e.target.name]: e.target.value,
-    });
+    }));
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (
+    e: React.FormEvent<HTMLFormElement>
+  ) => {
     e.preventDefault();
 
     setLoading(true);
@@ -41,45 +44,37 @@ export default function AddProduct() {
     setError("");
 
     try {
-  const response = await fetch(
-    `${API_BASE_URL}/api/products`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-      body: JSON.stringify({
-        product_name: formData.product_name,
-        category: formData.category,
-        description: formData.description,
-        price: Number(formData.price),
-        unit: formData.unit,
-        stock: Number(formData.stock),
-        image_url: formData.image_url || null,
-      }),
-    }
-  );
+      const token = localStorage.getItem("token");
 
-  const data = await response.json();
+      if (!token) {
+        throw new Error("Please log in as a farmer first.");
+      }
 
-  if (!response.ok || !data.success) {
-    throw new Error(
-      data.message ||
-        (isEditing
-          ? "Failed to update product"
-          : "Failed to add product")
-    );
-  }
-
-  // rest of your existing code continues here
+      const response = await fetch(
+        `${API_BASE_URL}/api/products`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            product_name: formData.product_name.trim(),
+            category: formData.category,
+            description: formData.description.trim(),
+            price: Number(formData.price),
+            unit: formData.unit,
+            stock: Number(formData.stock),
+            image_url: formData.image_url.trim() || null,
+          }),
+        }
       );
 
       const data = await response.json();
 
       if (!response.ok || !data.success) {
         throw new Error(
-          data.message || "Failed to add product"
+          data.message || "Failed to add product."
         );
       }
 
@@ -104,7 +99,7 @@ export default function AddProduct() {
       setError(
         err instanceof Error
           ? err.message
-          : "Something went wrong"
+          : "Something went wrong."
       );
     } finally {
       setLoading(false);
@@ -113,26 +108,20 @@ export default function AddProduct() {
 
   return (
     <main className="add-product-page">
-
       {/* SIDEBAR */}
       <aside className="farmer-sidebar">
-
         <div className="farmer-logo">
           <span className="logo-icon">🌱</span>
           <span>SmartAgri</span>
         </div>
 
         <div className="farmer-profile">
-          <div className="farmer-avatar">
-            👨‍🌾
-          </div>
-
+          <div className="farmer-avatar">👨‍🌾</div>
           <h3>Farmer</h3>
           <p>Farm Owner</p>
         </div>
 
         <nav className="farmer-nav">
-
           <Link href="/farmer/dashboard">
             <span>🏠</span>
             Dashboard
@@ -160,22 +149,18 @@ export default function AddProduct() {
             <span>👤</span>
             My Profile
           </Link>
-
         </nav>
 
         <Link href="/login" className="logout">
           <span>🚪</span>
           Logout
         </Link>
-
       </aside>
 
       {/* MAIN CONTENT */}
       <section className="add-product-content">
-
         {/* HEADER */}
         <div className="add-product-header">
-
           <div>
             <div className="breadcrumb">
               Farmer Dashboard
@@ -201,19 +186,14 @@ export default function AddProduct() {
           >
             ← My Products
           </Link>
-
         </div>
 
         {/* CONTENT GRID */}
         <div className="add-product-grid">
-
           {/* FORM CARD */}
           <div className="add-product-card">
-
             <div className="form-card-header">
-              <div className="form-card-icon">
-                📦
-              </div>
+              <div className="form-card-icon">📦</div>
 
               <div>
                 <h2>Product Information</h2>
@@ -227,13 +207,10 @@ export default function AddProduct() {
               onSubmit={handleSubmit}
               className="add-product-form"
             >
-
               {/* PRODUCT NAME */}
               <div className="form-field full-width">
-
                 <label>
-                  Product Name
-                  <span>*</span>
+                  Product Name <span>*</span>
                 </label>
 
                 <div className="input-wrapper">
@@ -248,12 +225,10 @@ export default function AddProduct() {
                     required
                   />
                 </div>
-
               </div>
 
               {/* CATEGORY */}
               <div className="form-field">
-
                 <label>Category</label>
 
                 <div className="input-wrapper">
@@ -264,50 +239,25 @@ export default function AddProduct() {
                     value={formData.category}
                     onChange={handleChange}
                   >
-                    <option value="Vegetables">
-                      Vegetables
-                    </option>
-
-                    <option value="Fruits">
-                      Fruits
-                    </option>
-
-                    <option value="Grains">
-                      Grains
-                    </option>
-
-                    <option value="Dairy">
-                      Dairy
-                    </option>
-
-                    <option value="Pulses">
-                      Pulses
-                    </option>
-
-                    <option value="Organic">
-                      Organic
-                    </option>
-
-                    <option value="Other">
-                      Other
-                    </option>
+                    <option value="Vegetables">Vegetables</option>
+                    <option value="Fruits">Fruits</option>
+                    <option value="Grains">Grains</option>
+                    <option value="Dairy">Dairy</option>
+                    <option value="Pulses">Pulses</option>
+                    <option value="Organic">Organic</option>
+                    <option value="Other">Other</option>
                   </select>
                 </div>
-
               </div>
 
               {/* PRICE */}
               <div className="form-field">
-
                 <label>
-                  Price
-                  <span>*</span>
+                  Price <span>*</span>
                 </label>
 
                 <div className="input-wrapper price-input">
-                  <span className="currency-symbol">
-                    ₹
-                  </span>
+                  <span className="currency-symbol">₹</span>
 
                   <input
                     type="number"
@@ -315,27 +265,21 @@ export default function AddProduct() {
                     value={formData.price}
                     onChange={handleChange}
                     placeholder="40"
-                    min="0"
+                    min="0.01"
                     step="0.01"
                     required
                   />
                 </div>
-
               </div>
 
               {/* STOCK */}
               <div className="form-field">
-
                 <label>
-                  Available Stock
-                  <span>*</span>
+                  Available Stock <span>*</span>
                 </label>
 
                 <div className="input-wrapper">
-
-                  <span className="input-icon">
-                    📊
-                  </span>
+                  <span className="input-icon">📊</span>
 
                   <input
                     type="number"
@@ -347,69 +291,38 @@ export default function AddProduct() {
                     step="0.01"
                     required
                   />
-
                 </div>
-
               </div>
 
               {/* UNIT */}
               <div className="form-field">
-
                 <label>Unit</label>
 
                 <div className="input-wrapper">
-
-                  <span className="input-icon">
-                    ⚖️
-                  </span>
+                  <span className="input-icon">⚖️</span>
 
                   <select
                     name="unit"
                     value={formData.unit}
                     onChange={handleChange}
                   >
-                    <option value="kg">
-                      Kilogram (kg)
-                    </option>
-
-                    <option value="gram">
-                      Gram (g)
-                    </option>
-
-                    <option value="quintal">
-                      Quintal
-                    </option>
-
-                    <option value="piece">
-                      Piece
-                    </option>
-
-                    <option value="dozen">
-                      Dozen
-                    </option>
-
-                    <option value="bunch">
-                      bunch
-                    </option>
-                    <option value="litre">
-                      litre(L)
-                    </option>
+                    <option value="kg">Kilogram (kg)</option>
+                    <option value="gram">Gram (g)</option>
+                    <option value="quintal">Quintal</option>
+                    <option value="piece">Piece</option>
+                    <option value="dozen">Dozen</option>
+                    <option value="bunch">Bunch</option>
+                    <option value="litre">Litre (L)</option>
                   </select>
-
                 </div>
-
               </div>
 
               {/* IMAGE */}
               <div className="form-field full-width">
-
                 <label>Product Image URL</label>
 
                 <div className="input-wrapper">
-
-                  <span className="input-icon">
-                    🖼️
-                  </span>
+                  <span className="input-icon">🖼️</span>
 
                   <input
                     type="url"
@@ -418,19 +331,15 @@ export default function AddProduct() {
                     onChange={handleChange}
                     placeholder="https://example.com/tomato.jpg"
                   />
-
                 </div>
 
                 <small>
-                  Use a clear image URL showing your
-                  product.
+                  Use a clear image URL showing your product.
                 </small>
-
               </div>
 
               {/* DESCRIPTION */}
               <div className="form-field full-width">
-
                 <label>Description</label>
 
                 <textarea
@@ -445,10 +354,9 @@ export default function AddProduct() {
                   A good description helps customers
                   understand your product.
                 </small>
-
               </div>
 
-              {/* MESSAGE */}
+              {/* SUCCESS MESSAGE */}
               {message && (
                 <div className="product-success">
                   <span>✓</span>
@@ -459,6 +367,7 @@ export default function AddProduct() {
                 </div>
               )}
 
+              {/* ERROR MESSAGE */}
               {error && (
                 <div className="product-error">
                   <span>!</span>
@@ -471,7 +380,6 @@ export default function AddProduct() {
 
               {/* BUTTONS */}
               <div className="form-actions">
-
                 <Link
                   href="/farmer/products"
                   className="cancel-btn"
@@ -490,39 +398,28 @@ export default function AddProduct() {
                       Adding Product...
                     </>
                   ) : (
-                    <>
-                      🌱 Add Product
-                    </>
+                    <>🌱 Add Product</>
                   )}
                 </button>
-
               </div>
-
             </form>
-
           </div>
 
-          {/* PREVIEW */}
+          {/* LIVE PREVIEW */}
           <div className="product-preview-area">
-
             <div className="preview-card">
-
               <div className="preview-header">
                 <div>
                   <span className="preview-label">
                     LIVE PREVIEW
                   </span>
-
                   <h2>Your Product</h2>
                 </div>
 
-                <span className="preview-eye">
-                  👁️
-                </span>
+                <span className="preview-eye">👁️</span>
               </div>
 
               <div className="preview-image-container">
-
                 {formData.image_url ? (
                   <img
                     src={formData.image_url}
@@ -540,11 +437,9 @@ export default function AddProduct() {
                     </span>
                   </div>
                 )}
-
               </div>
 
               <div className="preview-details">
-
                 <span className="preview-category">
                   {formData.category}
                 </span>
@@ -560,12 +455,9 @@ export default function AddProduct() {
                 </p>
 
                 <div className="preview-price-row">
-
                   <div className="preview-price">
                     ₹{formData.price || "0"}
-                    <span>
-                      / {formData.unit}
-                    </span>
+                    <span>/ {formData.unit}</span>
                   </div>
 
                   <div className="preview-stock">
@@ -575,35 +467,26 @@ export default function AddProduct() {
                       {formData.unit}
                     </strong>
                   </div>
-
                 </div>
-
               </div>
-
             </div>
 
             {/* FARMER TIP */}
             <div className="farmer-tip-card">
-
-              <div className="tip-icon">
-                💡
-              </div>
+              <div className="tip-icon">💡</div>
 
               <div>
                 <h3>Farmer Tip</h3>
-
                 <p>
                   Use a bright and clear product image,
                   accurate pricing and fresh stock
                   information to attract more customers.
                 </p>
               </div>
-
             </div>
 
             {/* PRODUCT CHECKLIST */}
             <div className="product-check-card">
-
               <h3>Before publishing</h3>
 
               <div className="check-item">
@@ -625,15 +508,10 @@ export default function AddProduct() {
                 <span>✓</span>
                 Add a quality image
               </div>
-
             </div>
-
           </div>
-
         </div>
-
       </section>
-
     </main>
   );
 }
