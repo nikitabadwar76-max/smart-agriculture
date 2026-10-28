@@ -100,12 +100,16 @@ router.get("/farmer/my-products", auth, async (req, res) => {
     }
 
     const [products] = await db.query(
-      `SELECT product_id, farmer_id, product_name, category,
-              description, price, unit, stock, image_url,
-              status, created_at, updated_at
-       FROM products
-       WHERE farmer_id = ?
-       ORDER BY product_id DESC`,
+      `SELECT p.product_id, p.farmer_id, p.product_name, p.category,
+              p.description, p.price, p.unit, p.stock, p.image_url,
+              p.status, p.created_at, p.updated_at,
+              ROUND(COALESCE(AVG(fb.rating), 0), 1) AS average_rating,
+              COUNT(fb.feedback_id) AS review_count
+       FROM products p
+       LEFT JOIN product_feedback fb ON p.product_id = fb.product_id
+       WHERE p.farmer_id = ?
+       GROUP BY p.product_id
+       ORDER BY p.product_id DESC`,
       [req.user.id]
     );
 
@@ -140,17 +144,21 @@ router.get("/", async (req, res) => {
                 p.created_at,
                 p.updated_at,
                 f.farmer_name,
-                f.mobile AS farmer_mobile
+                f.mobile AS farmer_mobile,
+                ROUND(COALESCE(AVG(fb.rating), 0), 1) AS average_rating,
+                COUNT(fb.feedback_id) AS review_count
             FROM products p
             LEFT JOIN farmers f
                 ON p.farmer_id = f.farmer_id
+            LEFT JOIN product_feedback fb
+                ON p.product_id = fb.product_id
         `;
 
         if (!isAll) {
             sql += ` WHERE p.status = 'available' AND p.stock > 0 `;
         }
 
-        sql += ` ORDER BY p.created_at DESC `;
+        sql += ` GROUP BY p.product_id, f.farmer_id ORDER BY p.created_at DESC `;
 
         const [products] = await db.query(sql);
 
@@ -185,20 +193,29 @@ router.get("/:id", async (req, res) => {
         const [products] = await db.query(
             `
             SELECT
-                product_id,
-                farmer_id,
-                product_name,
-                category,
-                description,
-                price,
-                unit,
-                stock,
-                image_url,
-                status,
-                created_at,
-                updated_at
-            FROM products
-            WHERE product_id = ?
+                p.product_id,
+                p.farmer_id,
+                p.product_name,
+                p.category,
+                p.description,
+                p.price,
+                p.unit,
+                p.stock,
+                p.image_url,
+                p.status,
+                p.created_at,
+                p.updated_at,
+                f.farmer_name,
+                f.mobile AS farmer_mobile,
+                ROUND(COALESCE(AVG(fb.rating), 0), 1) AS average_rating,
+                COUNT(fb.feedback_id) AS review_count
+            FROM products p
+            LEFT JOIN farmers f
+                ON p.farmer_id = f.farmer_id
+            LEFT JOIN product_feedback fb
+                ON p.product_id = fb.product_id
+            WHERE p.product_id = ?
+            GROUP BY p.product_id, f.farmer_id
             LIMIT 1
             `,
             [productId]

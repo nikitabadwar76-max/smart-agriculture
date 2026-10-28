@@ -14,6 +14,8 @@ interface Product {
   stock: string | number;
   image_url: string | null;
   status: string;
+  average_rating?: string | number;
+  review_count?: number;
 }
 
 const API_URL = `${API_BASE_URL}/api/products`;
@@ -41,6 +43,11 @@ export default function FarmerProductsPage() {
   const [editingProductId, setEditingProductId] = useState<number | null>(
     null
   );
+
+  // Feedback Modal State
+  const [feedbackModalProduct, setFeedbackModalProduct] = useState<Product | null>(null);
+  const [modalFeedbackList, setModalFeedbackList] = useState<any[]>([]);
+  const [modalFeedbackLoading, setModalFeedbackLoading] = useState(false);
 
   // ==========================================
   // FETCH PRODUCTS
@@ -285,6 +292,30 @@ export default function FarmerProductsPage() {
       } else {
         setError("Failed to delete product.");
       }
+    }
+  };
+
+  // ==========================================
+  // VIEW PRODUCT FEEDBACK
+  // ==========================================
+
+  const handleViewFeedback = async (product: Product) => {
+    setFeedbackModalProduct(product);
+    setModalFeedbackLoading(true);
+    setModalFeedbackList([]);
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/feedback/product/${product.product_id}`
+      );
+      const data = await response.json();
+      if (data.success && Array.isArray(data.feedback)) {
+        setModalFeedbackList(data.feedback);
+      }
+    } catch (err) {
+      console.error("Error loading product feedback:", err);
+    } finally {
+      setModalFeedbackLoading(false);
     }
   };
 
@@ -640,8 +671,8 @@ export default function FarmerProductsPage() {
 
                     </div>
 
-                    {/* STATUS */}
-                    <div className="mt-4">
+                    {/* STATUS & RATINGS */}
+                    <div className="mt-4 flex items-center justify-between">
                       {product.status === "available" ? (
                         <span className="text-green-600 font-bold text-sm">
                           ● Available
@@ -651,15 +682,23 @@ export default function FarmerProductsPage() {
                           ● Out of Stock
                         </span>
                       )}
+
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full">
+                        <span>★</span>
+                        <span>
+                          {Number(product.review_count || 0) > 0
+                            ? `${Number(product.average_rating).toFixed(1)} (${product.review_count})`
+                            : "New"}
+                        </span>
+                      </div>
                     </div>
 
                     {/* BUTTONS */}
-                    <div className="flex gap-3 mt-5">
-
+                    <div className="flex gap-2 mt-5">
                       <button
                         type="button"
                         onClick={() => handleEdit(product)}
-                        className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-3 rounded-xl transition"
+                        className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-2.5 rounded-xl text-xs transition"
                       >
                         ✏️ Edit
                       </button>
@@ -667,12 +706,20 @@ export default function FarmerProductsPage() {
                       <button
                         type="button"
                         onClick={() => handleDelete(product.product_id)}
-                        className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-bold py-3 rounded-xl transition"
+                        className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-bold py-2.5 rounded-xl text-xs transition"
                       >
                         🗑️ Delete
                       </button>
-
                     </div>
+
+                    {/* VIEW FEEDBACK BUTTON */}
+                    <button
+                      type="button"
+                      onClick={() => handleViewFeedback(product)}
+                      className="w-full mt-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <span>💬</span> Customer Feedback ({product.review_count || 0})
+                    </button>
 
                   </div>
                 </div>
@@ -685,6 +732,113 @@ export default function FarmerProductsPage() {
 
         </div>
       </div>
+
+      {/* FARMER FEEDBACK POPUP MODAL */}
+      {feedbackModalProduct && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setFeedbackModalProduct(null)}
+        >
+          <div
+            className="bg-white rounded-3xl max-w-lg w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="p-6 border-b border-gray-100 flex items-start justify-between">
+              <div>
+                <span className="text-xs font-extrabold uppercase tracking-widest text-amber-600">
+                  Customer Reviews
+                </span>
+                <h3 className="text-xl font-extrabold text-gray-900 mt-1">
+                  {feedbackModalProduct.product_name}
+                </h3>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-amber-500 font-bold text-sm">
+                    ★ {Number(feedbackModalProduct.average_rating || 0).toFixed(1)}
+                  </span>
+                  <span className="text-gray-400 text-xs">
+                    ({feedbackModalProduct.review_count || 0} reviews)
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setFeedbackModalProduct(null)}
+                className="w-9 h-9 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-500 font-bold transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto flex-1 space-y-4">
+              {modalFeedbackLoading ? (
+                <div className="py-12 text-center text-gray-400">
+                  <div className="text-3xl animate-spin mb-2">🌱</div>
+                  <p className="text-sm">Loading reviews...</p>
+                </div>
+              ) : modalFeedbackList.length === 0 ? (
+                <div className="py-12 text-center">
+                  <div className="text-5xl mb-3">💬</div>
+                  <h4 className="font-bold text-gray-700">No reviews yet</h4>
+                  <p className="text-gray-400 text-xs mt-1 max-w-xs mx-auto">
+                    When customers buy this product and rate it, their comments and feedback will show up here.
+                  </p>
+                </div>
+              ) : (
+                modalFeedbackList.map((fb: any) => (
+                  <div
+                    key={fb.feedback_id}
+                    className="p-4 rounded-2xl bg-gray-50 border border-gray-100"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-xs">
+                          {(fb.customer_name || "C").charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-gray-800">
+                            {fb.customer_name || "Customer"}
+                          </div>
+                          <div className="flex text-amber-400 text-xs">
+                            {[1, 2, 3, 4, 5].map((s) => (
+                              <span key={s}>{s <= fb.rating ? "★" : "☆"}</span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <span className="text-[10px] text-gray-400">
+                        {fb.created_at
+                          ? new Date(fb.created_at).toLocaleDateString("en-IN")
+                          : ""}
+                      </span>
+                    </div>
+
+                    {fb.comment && (
+                      <p className="mt-2.5 text-xs text-gray-700 leading-relaxed pl-10">
+                        {fb.comment}
+                      </p>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setFeedbackModalProduct(null)}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold px-5 py-2.5 rounded-xl text-xs transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

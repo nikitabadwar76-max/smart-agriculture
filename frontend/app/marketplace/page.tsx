@@ -16,6 +16,8 @@ interface Product {
   stock: string | number;
   image_url?: string;
   status?: string;
+  average_rating?: string | number;
+  review_count?: number;
 }
 
 interface CartItem extends Product {
@@ -326,7 +328,10 @@ export default function MarketplacePage() {
                 className="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-xl hover:-translate-y-1 transition duration-300"
               >
                 {/* IMAGE */}
-                <div className="h-52 bg-gray-100 overflow-hidden">
+                <Link
+                  href={`/products/${product.product_id}`}
+                  className="block h-52 bg-gray-100 overflow-hidden relative"
+                >
                   {product.image_url ? (
                     <img
                       src={product.image_url}
@@ -341,7 +346,22 @@ export default function MarketplacePage() {
                       🌱
                     </div>
                   )}
-                </div>
+
+                  {/* Rating Badge Overlay */}
+                  <div className="absolute bottom-2.5 left-2.5 bg-black/60 backdrop-blur-sm text-white px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm">
+                    <span className="text-amber-400">★</span>
+                    <span>
+                      {Number(product.review_count || 0) > 0
+                        ? Number(product.average_rating).toFixed(1)
+                        : "New"}
+                    </span>
+                    {Number(product.review_count || 0) > 0 && (
+                      <span className="text-gray-300 font-normal text-[10px]">
+                        ({product.review_count})
+                      </span>
+                    )}
+                  </div>
+                </Link>
 
                 {/* DETAILS */}
                 <div className="p-5">
@@ -355,18 +375,34 @@ export default function MarketplacePage() {
                     </span>
                   </div>
 
-                  <h3 className="text-xl font-bold text-gray-800 mt-3">
-                    {product.product_name}
-                  </h3>
-
-                  <Link
-                    href={`/products/${product.product_id}`}
-                    className="inline-block mt-3 text-green-700 font-bold hover:underline"
-                  >
-                    View Details &amp; Reviews →
+                  <Link href={`/products/${product.product_id}`}>
+                    <h3 className="text-xl font-bold text-gray-800 mt-2.5 hover:text-green-700 transition">
+                      {product.product_name}
+                    </h3>
                   </Link>
 
-                  <p className="text-gray-500 text-sm mt-2 min-h-[40px]">
+                  {/* Ratings Row */}
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <div className="flex text-amber-400 text-xs">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <span key={star}>
+                          {star <= Math.round(Number(product.average_rating || 0))
+                            ? "★"
+                            : "☆"}
+                        </span>
+                      ))}
+                    </div>
+                    <Link
+                      href={`/products/${product.product_id}#customer-reviews`}
+                      className="text-xs font-bold text-gray-600 hover:text-green-700 hover:underline"
+                    >
+                      {Number(product.review_count || 0) > 0
+                        ? `${Number(product.average_rating).toFixed(1)} (${product.review_count} reviews)`
+                        : "No ratings yet"}
+                    </Link>
+                  </div>
+
+                  <p className="text-gray-500 text-sm mt-2 min-h-[40px] line-clamp-2">
                     {product.description ||
                       "Fresh farm product directly from farmer."}
                   </p>

@@ -381,14 +381,32 @@ export default function OrdersPage() {
                   </div>
 
 
-                  {/* ================= BUTTON ================= */}
+                  {/* ================= BUTTONS ================= */}
 
-                  <Link
-                    href={`/order-details?orderId=${order.order_id}`}
-                    className="view-order-btn"
-                  >
-                    View Order Details →
-                  </Link>
+                  <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "16px" }}>
+                    <Link
+                      href={`/order-details?orderId=${order.order_id}`}
+                      className="view-order-btn"
+                      style={{ flex: 1, minWidth: "160px", textAlign: "center" }}
+                    >
+                      View Order Details →
+                    </Link>
+
+                    <Link
+                      href={`/order-details?orderId=${order.order_id}`}
+                      className="view-order-btn"
+                      style={{
+                        flex: 1,
+                        minWidth: "160px",
+                        textAlign: "center",
+                        background: "#f59e0b",
+                        color: "#ffffff",
+                        borderColor: "#d97706",
+                      }}
+                    >
+                      ⭐ Give Product Feedback
+                    </Link>
+                  </div>
 
                 </article>
 
