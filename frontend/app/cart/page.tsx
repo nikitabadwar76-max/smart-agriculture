@@ -67,19 +67,25 @@ export default function CartPage() {
   // ==========================================
   // INCREASE QUANTITY
   // ==========================================
+const increaseQuantity = (productId: number) => {
+  const updatedCart = cart.map((item) =>
+    item.product_id === productId
+      ? { ...item, quantity: item.quantity + 1 }
+      : item
+  );
 
-  const increaseQuantity = (productId: number) => {
-    const updatedCart = cart.map((item) =>
-      item.product_id === productId
-        ? {
-            ...item,
-            quantity: item.quantity + 1,
-          }
-        : item
-    );
+  saveCart(updatedCart);
+};
 
-    saveCart(updatedCart);
-  };
+const updateQuantity = (productId: number, quantity: number) => {
+  const updatedCart = cart.map((item) =>
+    item.product_id === productId
+      ? { ...item, quantity }
+      : item
+  );
+
+  saveCart(updatedCart);
+};
 
   // ==========================================
   // DECREASE QUANTITY
@@ -403,9 +409,22 @@ export default function CartPage() {
                       −
                     </button>
 
-                    <span>
-                      {item.quantity}
-                    </span>
+                    
+<input
+  type="number"
+  min="1"
+  step="1"
+  value={item.quantity}
+  onChange={(e) => {
+    const quantity = Number(e.target.value);
+
+    if (Number.isInteger(quantity) && quantity >= 1) {
+      updateQuantity(item.product_id, quantity);
+    }
+  }}
+  className="w-12 rounded-md border text-center font-semibold"
+/>
+
 
                     <button
                       type="button"

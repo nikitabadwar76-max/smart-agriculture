@@ -1,506 +1,256 @@
+
 "use client";
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { API_BASE_URL } from "../../../lib/api";
-const products = [
-  {
-    id: 1,
-    name: "Fresh Tomato",
-    category: "Vegetables",
-    price: 40,
-    unit: "kg",
-    farmer: "Ramesh Farm",
-    location: "Kopargaon",
-    quantity: 100,
-    emoji: "🍅",
-    description:
-      "Fresh farm-grown tomatoes directly from the farmer. Carefully harvested and supplied fresh to customers.",
-  },
-  {
-    id: 2,
-    name: "Fresh Potato",
-    category: "Vegetables",
-    price: 30,
-    unit: "kg",
-    farmer: "Shivaji Farm",
-    location: "Kopargaon",
-    quantity: 80,
-    emoji: "🥔",
-    description:
-      "Fresh quality potatoes harvested directly from our farm.",
-  },
-  {
-    id: 3,
-    name: "Fresh Onion",
-    category: "Vegetables",
-    price: 35,
-    unit: "kg",
-    farmer: "Ganesh Farm",
-    location: "Rahata",
-    quantity: 120,
-    emoji: "🧅",
-    description:
-      "Good quality fresh onions directly from the farm.",
-  },
-  {
-    id: 4,
-    name: "Fresh Apple",
-    category: "Fruits",
-    price: 150,
-    unit: "kg",
-    farmer: "Green Valley Farm",
-    location: "Nashik",
-    quantity: 50,
-    emoji: "🍎",
-    description:
-      "Fresh and naturally grown apples from our farm.",
-  },
-  {
-    id: 5,
-    name: "Fresh Banana",
-    category: "Fruits",
-    price: 60,
-    unit: "dozen",
-    farmer: "Krushi Farm",
-    location: "Kopargaon",
-    quantity: 70,
-    emoji: "🍌",
-    description:
-      "Fresh naturally ripened bananas.",
-  },
-  {
-    id: 6,
-    name: "Wheat",
-    category: "Grains",
-    price: 45,
-    unit: "kg",
-    farmer: "Sai Farm",
-    location: "Shirdi",
-    quantity: 200,
-    emoji: "🌾",
-    description:
-      "High-quality farm-grown wheat.",
-  },
-  {
-    id: 7,
-    name: "Green Chilli",
-    category: "Vegetables",
-    price: 80,
-    unit: "kg",
-    farmer: "Farm Fresh",
-    location: "Kopargaon",
-    quantity: 60,
-    emoji: "🌶️",
-    description:
-      "Fresh spicy green chillies directly from the farmer.",
-  },
-  {
-    id: 8,
-    name: "Mango",
-    category: "Fruits",
-    price: 120,
-    unit: "kg",
-    farmer: "Mango Valley",
-    location: "Nashik",
-    quantity: 90,
-    emoji: "🥭",
-    description:
-      "Fresh seasonal mangoes from the farm.",
-  },
-];
+
+interface Product {
+  product_id: number;
+  product_name: string;
+  category: string;
+  price: number | string;
+  unit: string;
+  stock: number | string;
+  description?: string;
+  image_url?: string | null;
+  farmer_name?: string;
+  farmer_mobile?: string;
+}
 
 export default function ProductDetails() {
-
   const params = useParams();
-
   const id = Number(params.id);
 
-  const product = products.find(
-    (item) => item.id === id
-  );
-const [rating, setRating] = useState(5);
-const [comment, setComment] = useState("");
-const [feedback, setFeedback] = useState<any[]>([]);
-const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
 
-useEffect(() => {
-  const loadFeedback = async () => {
+  // Load product from backend database
+  useEffect(() => {
+    const loadProduct = async () => {
+      try {
+        setLoading(true);
+        setErrorMessage("");
+
+        const response = await fetch(
+          `${API_BASE_URL}/api/products/${id}`
+        );
+
+        const data = await response.json();
+
+        if (!response.ok || !data.product) {
+          throw new Error(data.message || "Product not found.");
+        }
+
+        setProduct(data.product);
+      } catch (error) {
+        console.error("Product Load Error:", error);
+
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Unable to load product."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (Number.isFinite(id) && id > 0) {
+      loadProduct();
+    } else {
+      setErrorMessage("Invalid product ID.");
+      setLoading(false);
+    }
+  }, [id]);
+
+  // Add product to cart
+  const addToCart = () => {
+    if (!product) return;
+
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/feedback/product/${id}`
+      const existingCart = JSON.parse(
+        localStorage.getItem("cart") || "[]"
       );
 
-      const data = await response.json();
+      const existingProduct = existingCart.find(
+        (item: any) =>
+          Number(item.id ?? item.product_id) === product.product_id
+      );
 
-      if (data.success) {
-        setFeedback(data.feedback || []);
+      if (existingProduct) {
+        existingProduct.quantity =
+          Number(existingProduct.quantity || 0) + 1;
+      } else {
+        existingCart.push({
+          ...product,
+          id: product.product_id,
+          name: product.product_name,
+          farmer: product.farmer_name || "Local Farmer",
+          quantity: 1,
+        });
       }
+
+      localStorage.setItem("cart", JSON.stringify(existingCart));
+
+      alert(`${product.product_name} added to cart!`);
     } catch (error) {
-      console.error("Feedback Load Error:", error);
+      console.error("Add to Cart Error:", error);
+      alert("Unable to add product to cart.");
     }
   };
 
-  if (id) {
-    loadFeedback();
-  }
-}, [id]);
-
-  if (!product) {
-
+  // Loading state
+  if (loading) {
     return (
-
       <main className="product-not-found">
+        <h1>Loading product...</h1>
+      </main>
+    );
+  }
 
-        <h1>
-          Product Not Found
-        </h1>
-
+  // Product not found
+  if (!product) {
+    return (
+      <main className="product-not-found">
+        <h1>Product Not Found</h1>
+        <p>{errorMessage}</p>
         <Link href="/marketplace">
           ← Back to Marketplace
         </Link>
-
       </main>
     );
-
   }
-
-const submitFeedback = async () => {
-  if (!comment.trim()) {
-    setFeedbackMessage("Please enter your feedback.");
-    return;
-  }
-
-  const token = localStorage.getItem("token");
-
-  if (!token) {
-    setFeedbackMessage("Please login to submit feedback.");
-    return;
-  }
-
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/feedback`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        product_id: id,
-        rating: rating,
-        comment: comment,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (response.ok && data.success) {
-      setFeedbackMessage("Feedback submitted successfully!");
-      setComment("");
-      setRating(5);
-
-      const result = await fetch(
-        `${API_BASE_URL}/api/feedback/product/${id}`
-      );
-      const feedbackData = await result.json();
-
-      if (feedbackData.success) {
-        setFeedback(feedbackData.feedback || []);
-      }
-    } else {
-      setFeedbackMessage(data.message || "Unable to submit feedback.");
-    }
-  } catch (error) {
-    setFeedbackMessage("Something went wrong. Please try again.");
-    console.error("Feedback Error:", error);
-  }
-};
-
-  const addToCart = () => {
-
-    const existingCart = JSON.parse(
-      localStorage.getItem("cart") || "[]"
-    );
-
-    const existingProduct = existingCart.find(
-      (item: any) => item.id === product.id
-    );
-
-    if (existingProduct) {
-
-      existingProduct.quantity += 1;
-
-    } else {
-
-      existingCart.push({
-        ...product,
-        quantity: 1,
-      });
-
-    }
-
-    localStorage.setItem(
-      "cart",
-      JSON.stringify(existingCart)
-    );
-
-    alert(`${product.name} added to cart!`);
-  };
-
 
   return (
-
     <main className="product-details-page">
-
       {/* Header */}
-
       <header className="market-header">
-
-        <Link
-          href="/"
-          className="market-logo"
-        >
+        <Link href="/" className="market-logo">
           🌱 SmartAgri
         </Link>
 
         <nav>
-
-          <Link href="/marketplace">
-            Marketplace
-          </Link>
-
-          <Link href="/cart">
-            🛒 Cart
-          </Link>
-
-          <Link href="/login">
-            Login
-          </Link>
-
+          <Link href="/marketplace">Marketplace</Link>
+          <Link href="/cart">🛒 Cart</Link>
+          <Link href="/login">Login</Link>
         </nav>
-
       </header>
 
-
       {/* Product Details */}
-
       <section className="product-details">
-
-        <Link
-          href="/marketplace"
-          className="back-market"
-        >
+        <Link href="/marketplace" className="back-market">
           ← Back to Marketplace
         </Link>
 
-
         <div className="product-details-card">
-
-          {/* Image */}
-
+          {/* Product Image */}
           <div className="details-image">
-
-            <span>
-              {product.emoji}
-            </span>
+            {product.image_url ? (
+              <img
+                src={product.image_url}
+                alt={product.product_name}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                }}
+              />
+            ) : (
+              <span style={{ fontSize: "90px" }}>🌱</span>
+            )}
 
             <div className="fresh-label">
               🌱 Fresh From Farm
             </div>
-
           </div>
 
-
-          {/* Information */}
-
+          {/* Product Information */}
           <div className="details-info">
-
             <span className="details-category">
               {product.category}
             </span>
 
-            <h1>
-              {product.name}
-            </h1>
+            <h1>{product.product_name}</h1>
 
             <div className="details-price">
-
               <strong>
-                ₹{product.price}
+                ₹{Number(product.price).toLocaleString("en-IN")}
               </strong>
 
-              <span>
-                / {product.unit}
-              </span>
-
+              <span>/ {product.unit}</span>
             </div>
 
-
+            {/* Farmer Information */}
             <div className="details-farmer">
-
               <div className="farmer-detail-avatar">
                 👨‍🌾
               </div>
 
               <div>
-
-                <small>
-                  Sold by
-                </small>
+                <small>Sold by</small>
 
                 <h3>
-                  {product.farmer}
+                  {product.farmer_name || "Local Farmer"}
                 </h3>
 
-                <p>
-                  📍 {product.location}
-                </p>
-
+                {product.farmer_mobile && (
+                  <p>📞 {product.farmer_mobile}</p>
+                )}
               </div>
-
             </div>
 
-
+            {/* Available Stock */}
             <div className="details-stock">
-
-              <span>
-                Available Stock
-              </span>
+              <span>Available Stock</span>
 
               <strong>
-                {product.quantity} {product.unit}
+                {Number(product.stock).toLocaleString("en-IN")}{" "}
+                {product.unit}
               </strong>
-
             </div>
 
-
+            {/* Description */}
             <div className="details-description">
-
-              <h2>
-                About this product
-              </h2>
+              <h2>About this product</h2>
 
               <p>
-                {product.description}
+                {product.description ||
+                  "Fresh farm product directly from the farmer."}
               </p>
-
             </div>
 
-{/* Customer Feedback */}
-
-<div className="details-description">
-  <h2>⭐ Customer Feedback</h2>
-
-  <label>Rate this product:</label>
-
-  <div>
-    {[1, 2, 3, 4, 5].map((star) => (
-      <button
-        key={star}
-        type="button"
-        onClick={() => setRating(star)}
-        style={{
-          color: star <= rating ? "#f59e0b" : "#9ca3af",
-          fontSize: "28px",
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-        }}
-      >
-     ★
-      </button>
-    ))}
-  </div>
-
-  <textarea
-    value={comment}
-    onChange={(e) => setComment(e.target.value)}
-    placeholder="Write your feedback about this product..."
-    rows={4}
-    style={{
-      width: "100%",
-      padding: "12px",
-      marginTop: "10px",
-      border: "1px solid #ccc",
-      borderRadius: "8px",
-    }}
-  />
-
-  <button
-    type="button"
-    onClick={submitFeedback}
-    style={{
-      display: "block",
-      marginTop: "12px",
-      padding: "10px 20px",
-      backgroundColor: "#15803d",
-      color: "white",
-      border: "none",
-      borderRadius: "8px",
-      cursor: "pointer",
-    }}
-  >
-    Submit Feedback
-  </button>
-
-  {feedbackMessage && (
-    <p style={{ marginTop: "10px" }}>
-      {feedbackMessage}
-    </p>
-  )}
-
-  <h3 style={{ marginTop: "24px" }}>Customer Reviews</h3>
-
-  {feedback.length === 0 ? (
-    <p>No reviews yet. Be the first to review!</p>
-  ) : (
-    feedback.map((item, index) => (
-      <div
-        key={item.feedback_id || index}
-        style={{
-          padding: "12px 0",
-          borderBottom: "1px solid #ddd",
-        }}
-      >
-        <strong>Rating: {"⭐".repeat(Number(item.rating) || 0)}</strong>
-        <p>{item.comment}</p>
-        {item.created_at && (
-          <small>
-            {new Date(item.created_at).toLocaleDateString("en-IN")}
-          </small>
-        )}
-      </div>
-    ))
-  )}
-</div>
-
-
-
+            {/* Product Actions */}
             <div className="details-actions">
-
               <button
                 className="details-cart"
                 onClick={addToCart}
+                disabled={Number(product.stock) <= 0}
               >
                 🛒 Add to Cart
               </button>
 
-              <Link
-                href="/cart"
+              <button
                 className="details-buy"
+                onClick={() => {
+                  if (Number(product.stock) <= 0) {
+                    alert("This product is out of stock.");
+                    return;
+                  }
+
+                  addToCart();
+                  window.location.href = "/cart";
+                }}
+                disabled={Number(product.stock) <= 0}
               >
                 Buy Now
-              </Link>
-
+              </button>
             </div>
-
           </div>
-
         </div>
-
       </section>
-
     </main>
   );
 }
