@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { API_BASE_URL } from "../../../lib/api";
+import { detectUnitFromProductName } from "../../../lib/unitDetector";
 
 interface Product {
   product_id: number;
@@ -10,6 +11,7 @@ interface Product {
   category: string;
   description: string | null;
   price: string | number;
+  discount_percent?: string | number;
   unit: string;
   stock: string | number;
   image_url: string | null;
@@ -25,6 +27,7 @@ const emptyForm = {
   category: "Vegetables",
   description: "",
   price: "",
+  discount_percent: "0",
   unit: "kg",
   stock: "",
   image_url: "",
@@ -33,6 +36,8 @@ const emptyForm = {
 export default function FarmerProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [formData, setFormData] = useState(emptyForm);
+
+  const [autoUnitNotice, setAutoUnitNotice] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -124,10 +129,24 @@ export default function FarmerProductsPage() {
   ) => {
     const { name, value } = e.target;
 
-    setFormData((previous) => ({
-      ...previous,
-      [name]: value,
-    }));
+    if (name === "product_name") {
+      const detected = detectUnitFromProductName(value);
+      setFormData((prev) => ({
+        ...prev,
+        product_name: value,
+        unit: detected ? detected.unit : prev.unit,
+      }));
+      if (detected) {
+        setAutoUnitNotice(`⚡ Auto-selected: ${detected.label}`);
+      } else {
+        setAutoUnitNotice(null);
+      }
+    } else {
+      setFormData((previous) => ({
+        ...previous,
+        [name]: value,
+      }));
+    }
   };
 
   // ==========================================
@@ -151,10 +170,11 @@ export default function FarmerProductsPage() {
       const method = isEditing ? "PUT" : "POST";
 
       const productData = {
-  product_name: formData.product_name.trim(),
+        product_name: formData.product_name.trim(),
         category: formData.category,
         description: formData.description.trim(),
         price: Number(formData.price),
+        discount_percent: Number(formData.discount_percent) || 0,
         unit: formData.unit,
         stock: Number(formData.stock),
         image_url: formData.image_url.trim() || null,
@@ -222,6 +242,7 @@ export default function FarmerProductsPage() {
       category: product.category,
       description: product.description || "",
       price: String(product.price),
+      discount_percent: String(product.discount_percent || 0),
       unit: product.unit,
       stock: String(product.stock),
       image_url: product.image_url || "",
@@ -376,10 +397,16 @@ export default function FarmerProductsPage() {
                 name="product_name"
                 value={formData.product_name}
                 onChange={handleChange}
-                placeholder="Example: Fresh Tomato"
+                placeholder="Example: Banana / केळी, Tomato..."
                 required
                 className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-green-500"
               />
+
+              {autoUnitNotice && (
+                <div className="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs font-bold flex items-center gap-1.5">
+                  <span>{autoUnitNotice}</span>
+                </div>
+              )}
             </div>
 
             {/* CATEGORY + UNIT */}
@@ -400,26 +427,30 @@ export default function FarmerProductsPage() {
                   <option value="Fruits">Fruits</option>
                   <option value="Grains">Grains</option>
                   <option value="Dairy">Dairy</option>
+                  <option value="Pulses">Pulses</option>
+                  <option value="Organic">Organic</option>
                   <option value="Other">Other</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Unit
+                  Unit (Auto-selected)
                 </label>
 
                 <select
                   name="unit"
                   value={formData.unit}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 bg-white outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full border border-emerald-300 bg-emerald-50/50 text-emerald-900 font-semibold rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-green-500"
                 >
-                  <option value="kg">Kilogram (kg)</option>
+                  <option value="kg">Kilogram (kg) - किलो</option>
+                  <option value="dozen">Dozen (डझन - केळी, अंडी इ.)</option>
+                  <option value="litre">Litre (L) - लिटर</option>
+                  <option value="bunch">Bunch (जुडी - पालक, मेथी)</option>
+                  <option value="piece">Piece (नग - नारळ, कलिंगड)</option>
+                  <option value="quintal">Quintal (क्विंटल)</option>
                   <option value="gram">Gram</option>
-                  <option value="piece">Piece</option>
-                  <option value="dozen">Dozen</option>
-                  <option value="liter">Liter</option>
                 </select>
               </div>
 
@@ -430,7 +461,7 @@ export default function FarmerProductsPage() {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Price (₹)
+                  Price (₹ per {formData.unit})
                 </label>
 
                 <input
@@ -448,7 +479,7 @@ export default function FarmerProductsPage() {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Available Stock
+                  Available Stock ({formData.unit})
                 </label>
 
                 <input
@@ -464,6 +495,51 @@ export default function FarmerProductsPage() {
                 />
               </div>
 
+            </div>
+
+            {/* DISCOUNT SECTION */}
+            <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-5">
+              <div className="flex justify-between items-center mb-2">
+                <label className="font-bold text-amber-900 text-sm flex items-center gap-1.5">
+                  <span>🏷️</span> Product Discount (सवलत): {formData.discount_percent || 0}% OFF
+                </label>
+                {Number(formData.discount_percent) > 0 && Number(formData.price) > 0 && (
+                  <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">
+                    Selling Price: ₹{(Number(formData.price) * (1 - Number(formData.discount_percent) / 100)).toFixed(2)} / {formData.unit}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-amber-700 mb-3">
+                💡 जर 100 पैकी 50 विकले आणि उरलेले 50 लवकर विकायचे असतील, तर सवलत लागू करा!
+              </p>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  name="discount_percent"
+                  min="0"
+                  max="80"
+                  step="5"
+                  value={formData.discount_percent || "0"}
+                  onChange={handleChange}
+                  className="flex-1 accent-amber-600"
+                />
+                <div className="flex gap-1.5 flex-wrap">
+                  {[0, 10, 20, 50].map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setFormData((p) => ({ ...p, discount_percent: String(d) }))}
+                      className={`text-xs px-2.5 py-1 rounded-lg font-bold border transition ${
+                        Number(formData.discount_percent) === d
+                          ? "bg-amber-600 text-white border-amber-600"
+                          : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100"
+                      }`}
+                    >
+                      {d === 0 ? "0%" : `${d}%`}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {/* DESCRIPTION */}
@@ -635,9 +711,16 @@ export default function FarmerProductsPage() {
                   {/* DETAILS */}
                   <div className="p-6">
 
-                    <span className="inline-block bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-bold">
-                      {product.category}
-                    </span>
+                    <div className="flex justify-between items-center">
+                      <span className="inline-block bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-bold">
+                        {product.category}
+                      </span>
+                      {Number(product.discount_percent) > 0 && (
+                        <span className="bg-red-500 text-white text-xs font-extrabold px-2.5 py-0.5 rounded-full shadow-sm animate-pulse">
+                          🔥 {product.discount_percent}% OFF
+                        </span>
+                      )}
+                    </div>
 
                     <h3 className="text-xl font-extrabold text-gray-800 mt-3">
                       {product.product_name}
@@ -650,9 +733,20 @@ export default function FarmerProductsPage() {
                     <div className="flex justify-between items-end mt-5">
 
                       <div>
-                        <div className="text-2xl font-extrabold text-green-700">
-                          ₹{Number(product.price).toFixed(2)}
-                        </div>
+                        {Number(product.discount_percent) > 0 ? (
+                          <>
+                            <div className="text-xs text-gray-400 line-through">
+                              ₹{Number(product.price).toFixed(2)}
+                            </div>
+                            <div className="text-2xl font-extrabold text-emerald-700">
+                              ₹{(Number(product.price) * (1 - Number(product.discount_percent) / 100)).toFixed(2)}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-2xl font-extrabold text-green-700">
+                            ₹{Number(product.price).toFixed(2)}
+                          </div>
+                        )}
 
                         <div className="text-gray-500 text-sm">
                           per {product.unit}

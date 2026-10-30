@@ -18,7 +18,8 @@ router.post("/", auth, async (req, res) => {
             price,
             unit,
             stock,
-            image_url
+            image_url,
+            discount_percent
         } = req.body;
 
         if (
@@ -41,6 +42,10 @@ router.post("/", auth, async (req, res) => {
             });
         }
 
+        const validDiscount = Number(discount_percent) >= 0 && Number(discount_percent) <= 90
+            ? Number(discount_percent)
+            : 0;
+
         const sql = `
             INSERT INTO products
             (
@@ -51,9 +56,10 @@ router.post("/", auth, async (req, res) => {
                 price,
                 unit,
                 stock,
-                image_url
+                image_url,
+                discount_percent
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
         const [result] = await db.query(sql, [
@@ -64,7 +70,8 @@ router.post("/", auth, async (req, res) => {
             price,
             unit,
             stock,
-            image_url || null
+            image_url || null,
+            validDiscount
         ]);
 
         return res.status(201).json({
@@ -102,6 +109,7 @@ router.get("/farmer/my-products", auth, async (req, res) => {
     const [products] = await db.query(
       `SELECT p.product_id, p.farmer_id, p.product_name, p.category,
               p.description, p.price, p.unit, p.stock, p.image_url,
+              p.discount_percent,
               p.status, p.created_at, p.updated_at,
               ROUND(COALESCE(AVG(fb.rating), 0), 1) AS average_rating,
               COUNT(fb.feedback_id) AS review_count
@@ -140,6 +148,7 @@ router.get("/", async (req, res) => {
                 p.unit,
                 p.stock,
                 p.image_url,
+                p.discount_percent,
                 p.status,
                 p.created_at,
                 p.updated_at,
@@ -202,6 +211,7 @@ router.get("/:id", async (req, res) => {
                 p.unit,
                 p.stock,
                 p.image_url,
+                p.discount_percent,
                 p.status,
                 p.created_at,
                 p.updated_at,
@@ -262,7 +272,8 @@ router.put("/:id", auth, async (req, res) => {
             unit,
             stock,
             image_url,
-            status
+            status,
+            discount_percent
         } = req.body;
 
         if (
@@ -285,6 +296,10 @@ router.put("/:id", auth, async (req, res) => {
             });
         }
 
+        const validDiscount = Number(discount_percent) >= 0 && Number(discount_percent) <= 90
+            ? Number(discount_percent)
+            : 0;
+
         const [result] = await db.query(
             `
             UPDATE products
@@ -296,7 +311,8 @@ router.put("/:id", auth, async (req, res) => {
                 unit = ?,
                 stock = ?,
                 image_url = ?,
-                status = ?
+                status = ?,
+                discount_percent = ?
             WHERE product_id = ?
             AND farmer_id = ?
             `,
@@ -309,6 +325,7 @@ router.put("/:id", auth, async (req, res) => {
                 stock,
                 image_url || null,
                 status || "available",
+                validDiscount,
                 productId,
                 req.user.id
             ]

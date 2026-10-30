@@ -12,6 +12,7 @@ interface Product {
   category: string;
   description?: string;
   price: string | number;
+  discount_percent?: string | number;
   unit: string;
   stock: string | number;
   image_url?: string;
@@ -139,12 +140,18 @@ export default function MarketplacePage() {
         (item) => item.product_id === product.product_id
       );
 
+      const discount = Number(product.discount_percent) || 0;
+      const effectivePrice = discount > 0
+        ? Number((Number(product.price) * (1 - discount / 100)).toFixed(2))
+        : Number(product.price);
+
       if (existingIndex >= 0) {
         existingCart[existingIndex].quantity =
           (Number(existingCart[existingIndex].quantity) || 0) + 1;
       } else {
         existingCart.push({
           ...product,
+          price: effectivePrice,
           quantity: 1,
         });
       }
@@ -410,18 +417,36 @@ export default function MarketplacePage() {
                   {/* PRICE AND STOCK */}
                   <div className="flex justify-between items-end mt-5">
                     <div>
-                      <span className="text-2xl font-bold text-green-700">
-                        ₹{Number(product.price).toFixed(2)}
-                      </span>
+                      {Number(product.discount_percent) > 0 ? (
+                        <>
+                          <div className="text-xs text-gray-400 line-through">
+                            ₹{Number(product.price).toFixed(2)}
+                          </div>
+                          <span className="text-2xl font-bold text-emerald-700">
+                            ₹{(Number(product.price) * (1 - Number(product.discount_percent) / 100)).toFixed(2)}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-2xl font-bold text-green-700">
+                          ₹{Number(product.price).toFixed(2)}
+                        </span>
+                      )}
 
                       <span className="text-gray-500 text-sm ml-1">
                         / {product.unit}
                       </span>
                     </div>
 
-                    <span className="text-xs text-gray-500">
-                      Stock: {product.stock}
-                    </span>
+                    <div className="text-right">
+                      {Number(product.discount_percent) > 0 && (
+                        <span className="inline-block bg-red-500 text-white text-[10px] font-extrabold px-1.5 py-0.5 rounded mb-1">
+                          {product.discount_percent}% OFF
+                        </span>
+                      )}
+                      <div className="text-xs text-gray-500">
+                        Stock: {product.stock} {product.unit}
+                      </div>
+                    </div>
                   </div>
 
                   {/* ADD TO CART */}

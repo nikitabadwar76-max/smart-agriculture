@@ -10,6 +10,7 @@ interface Product {
   product_name: string;
   category: string;
   price: number | string;
+  discount_percent?: number | string;
   unit: string;
   stock: number | string;
   description?: string;
@@ -513,13 +514,32 @@ export default function ProductDetailsPage() {
               </div>
 
               {/* Price */}
-              <div className="mt-6 flex items-baseline gap-2">
-                <span className="text-4xl font-extrabold text-green-700">
-                  ₹{Number(product.price).toFixed(2)}
-                </span>
-                <span className="text-gray-500 font-semibold text-lg">
-                  / {product.unit}
-                </span>
+              <div className="mt-6">
+                {Number(product.discount_percent) > 0 ? (
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl text-gray-400 line-through">
+                      ₹{Number(product.price).toFixed(2)}
+                    </span>
+                    <span className="text-4xl font-extrabold text-emerald-700">
+                      ₹{(Number(product.price) * (1 - Number(product.discount_percent) / 100)).toFixed(2)}
+                    </span>
+                    <span className="text-gray-500 font-semibold text-lg">
+                      / {product.unit}
+                    </span>
+                    <span className="bg-red-500 text-white text-xs font-black px-2.5 py-1 rounded-full animate-pulse shadow-sm">
+                      🔥 {product.discount_percent}% OFF
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-4xl font-extrabold text-green-700">
+                      ₹{Number(product.price).toFixed(2)}
+                    </span>
+                    <span className="text-gray-500 font-semibold text-lg">
+                      / {product.unit}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Farmer Info */}

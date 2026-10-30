@@ -15,6 +15,8 @@ const auth = require("../middleware/auth");
         total_amount,
         payment_method,
         delivery_address,
+        delivery_charge,
+        distance_km,
         items
     } = req.body;
 
@@ -83,14 +85,18 @@ const auth = require("../middleware/auth");
                 customer_id,
                 total_amount,
                 payment_method,
-                delivery_address
+                delivery_address,
+                delivery_charge,
+                distance_km
             )
-            VALUES (?, ?, ?, ?)`,
+            VALUES (?, ?, ?, ?, ?, ?)`,
             [
                 customer_id,
                 Number(total_amount),
                 payment_method || "Cash on Delivery",
-                delivery_address
+                delivery_address,
+                Number(delivery_charge) || 0,
+                Number(distance_km) || 0
             ]
         );
 
@@ -282,6 +288,8 @@ router.get("/", async (req, res) => {
                 c.mobile AS customer_mobile,
                 c.address AS customer_address,
                 o.total_amount,
+                o.delivery_charge,
+                o.distance_km,
                 o.order_status,
                 o.payment_status,
                 o.payment_method,
@@ -334,6 +342,8 @@ router.get("/:orderId", auth, async (req, res) => {
                 c.mobile AS customer_mobile,
                 c.address AS customer_profile_address,
                 o.total_amount,
+                o.delivery_charge,
+                o.distance_km,
                 o.order_status,
                 o.payment_status,
                 o.payment_method,

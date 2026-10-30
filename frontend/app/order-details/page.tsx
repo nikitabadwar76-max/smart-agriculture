@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { API_BASE_URL } from "../../lib/api";
+import "./order-details.css";
 
 interface Product {
   id: number;
@@ -31,6 +32,7 @@ interface Order {
   products: Product[];
   subtotal: number;
   deliveryCharge: number;
+  distanceKm: number;
   total: number;
   paymentMethod: string;
   status: string;
@@ -44,6 +46,8 @@ function OrderDetailsContent() {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string>("customer");
+  const [copiedId, setCopiedId] = useState(false);
+  const [showUpiModal, setShowUpiModal] = useState(false);
 
   // Feedback Modal State
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -72,14 +76,11 @@ function OrderDetailsContent() {
       setLoading(true);
       const token = localStorage.getItem("token");
 
-      const response = await fetch(
-        `${API_BASE_URL}/api/orders/${orderId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       const data = await response.json();
 
@@ -114,6 +115,15 @@ function OrderDetailsContent() {
           }
         }
 
+        const delivery = Number(backendOrder.delivery_charge) || 0;
+        const total = Number(backendOrder.total_amount) || 0;
+        const items = data.items || [];
+        const itemsSubtotal = items.reduce(
+          (sum: number, it: any) =>
+            sum + (Number(it.subtotal) || Number(it.price) * Number(it.quantity)),
+          0
+        );
+
         setOrder({
           orderId: String(backendOrder.order_id),
           customer: {
@@ -126,7 +136,7 @@ function OrderDetailsContent() {
             city: "",
             pincode: "",
           },
-          products: (data.items || []).map((item: any) => {
+          products: items.map((item: any) => {
             const prevFb = reviewedProductsMap[item.product_id];
             return {
               id: item.product_id,
@@ -140,9 +150,10 @@ function OrderDetailsContent() {
               userComment: prevFb ? prevFb.comment : undefined,
             };
           }),
-          subtotal: Number(backendOrder.total_amount),
-          deliveryCharge: 0,
-          total: Number(backendOrder.total_amount),
+          subtotal: itemsSubtotal > 0 ? itemsSubtotal : total - delivery,
+          deliveryCharge: delivery,
+          distanceKm: Number(backendOrder.distance_km) || 0,
+          total: total,
           paymentMethod: backendOrder.payment_method || "Cash on Delivery",
           status: backendOrder.order_status || "Pending",
           createdAt: backendOrder.order_date,
@@ -161,6 +172,51 @@ function OrderDetailsContent() {
   useEffect(() => {
     fetchOrder();
   }, [orderId]);
+
+  const copyOrderId = () => {
+    if (!order) return;
+    navigator.clipboard.writeText(`FD${order.orderId.padStart(8, "0")}`);
+    setCopiedId(true);
+    setTimeout(() => setCopiedId(false), 2000);
+  };
+
+  const handlePrint = () => {
+    if (typeof window !== "undefined") {
+      window.print();
+    }
+  };
+
+  const handleWhatsAppShare = () => {
+    if (!order) return;
+    const phone =
+      order.customer.phone.replace(/\D/g, "") ||
+      localStorage.getItem("customer_mobile") ||
+      "";
+    const formattedPhone = phone.length === 10 ? `91${phone}` : phone;
+
+    const itemsText = order.products
+      .map(
+        (p, i) =>
+          `${i + 1}. ${p.name} - ${p.quantity} ${p.unit} (₹${(
+            p.price * p.quantity
+          ).toFixed(0)})`
+      )
+      .join("\n");
+
+    const message = `🌱 *SmartAgri Order Details*\n*Order ID:* #FD${order.orderId.padStart(
+      8,
+      "0"
+    )}\n*Status:* ${order.status}\n\n*Items:*\n${itemsText}\n\n*Delivery Fee:* ₹${
+      order.deliveryCharge
+    }\n*Total:* ₹${order.total.toFixed(0)}\n*Payment:* ${
+      order.paymentMethod
+    }\n\n📍 *Address:* ${order.customer.address}`;
+
+    const url = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(
+      message
+    )}`;
+    window.open(url, "_blank");
+  };
 
   const openFeedbackModal = (product: Product) => {
     setSelectedProduct(product);
@@ -233,215 +289,350 @@ function OrderDetailsContent() {
 
   if (loading) {
     return (
-      <main className="no-order-details">
-        <div className="no-orders-icon">🌱</div>
-        <h1>Loading Order Details...</h1>
+      <main className="order-details-page">
+        <header className="od-header">
+          <div className="od-header-container">
+            <Link href="/" className="od-brand">
+              <span>🌱</span>
+              <span>SmartAgri</span>
+            </Link>
+          </div>
+        </header>
+        <div style={{ textAlign: "center", padding: "100px 20px" }}>
+          <div style={{ fontSize: "50px", marginBottom: "16px" }}>🌱</div>
+          <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#065f46" }}>
+            Loading Order Details...
+          </h1>
+          <p style={{ color: "#6b7280", marginTop: "8px" }}>
+            Retrieving fresh farm receipt and order status.
+          </p>
+        </div>
       </main>
     );
   }
 
   if (!order) {
     return (
-      <main className="no-order-details">
-        <div className="no-orders-icon">📦</div>
-        <h1>Order Not Found</h1>
-        <p>The requested order could not be found or you do not have access.</p>
-        <Link
-          href={userRole === "farmer" ? "/farmer/orders" : "/orders"}
-          className="continue-shopping"
-        >
-          ← Back to Orders
-        </Link>
+      <main className="order-details-page">
+        <header className="od-header">
+          <div className="od-header-container">
+            <Link href="/" className="od-brand">
+              <span>🌱</span>
+              <span>SmartAgri</span>
+            </Link>
+          </div>
+        </header>
+        <div style={{ textAlign: "center", padding: "100px 20px", maxWidth: "450px", margin: "0 auto" }}>
+          <div style={{ fontSize: "60px", marginBottom: "16px" }}>📦</div>
+          <h1 style={{ fontSize: "28px", fontWeight: 800, color: "#1f2937" }}>
+            Order Not Found
+          </h1>
+          <p style={{ color: "#6b7280", marginTop: "8px", lineHeight: 1.5 }}>
+            The requested order ID could not be loaded or you do not have permission to view it.
+          </p>
+          <Link
+            href={userRole === "farmer" ? "/farmer/orders" : "/orders"}
+            className="od-back-btn"
+            style={{ marginTop: "24px", background: "#059669", color: "#fff" }}
+          >
+            ← View All Orders
+          </Link>
+        </div>
       </main>
     );
   }
 
-  const starLabels: { [key: number]: string } = {
-    1: "Poor 😞",
-    2: "Fair 😐",
-    3: "Good 😊",
-    4: "Very Good 😃",
-    5: "Excellent! 🌟",
-  };
+  const statusLower = order.status.toLowerCase();
+  const isConfirmed =
+    statusLower === "confirmed" ||
+    statusLower === "processing" ||
+    statusLower === "shipped" ||
+    statusLower === "delivered";
+  const isShipped =
+    statusLower === "processing" ||
+    statusLower === "shipped" ||
+    statusLower === "delivered";
+  const isDelivered = statusLower === "delivered";
+
+  const isUpi =
+    order.paymentMethod.toLowerCase().includes("upi") ||
+    order.paymentMethod.toLowerCase().includes("phonepe");
+
+  const formattedOrderId = `FD${order.orderId.padStart(8, "0")}`;
 
   return (
     <main className="order-details-page">
-      {/* Header */}
-      <header className="market-header">
-        <Link href="/" className="market-logo">
-          🌱 SmartAgri
-        </Link>
+      {/* HEADER */}
+      <header className="od-header">
+        <div className="od-header-container">
+          <Link href="/" className="od-brand">
+            <span>🌱</span>
+            <span>SmartAgri</span>
+          </Link>
 
-        <nav>
-          {userRole === "farmer" ? (
-            <>
-              <Link href="/farmer/products">My Products</Link>
-              <Link href="/farmer/orders" className="market-active">
-                Orders
-              </Link>
-              <Link href="/marketplace">Marketplace</Link>
-            </>
-          ) : (
-            <>
-              <Link href="/marketplace">Marketplace</Link>
-              <Link href="/cart">Cart</Link>
-              <Link href="/orders" className="market-active">
-                Orders
-              </Link>
-            </>
-          )}
-        </nav>
+          <nav className="od-nav-links">
+            {userRole === "farmer" ? (
+              <>
+                <Link href="/farmer/products" className="od-nav-link">
+                  My Products
+                </Link>
+                <Link href="/farmer/orders" className="od-nav-link active">
+                  Orders
+                </Link>
+                <Link href="/marketplace" className="od-nav-link">
+                  Marketplace
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link href="/marketplace" className="od-nav-link">
+                  Marketplace
+                </Link>
+                <Link href="/cart" className="od-nav-link">
+                  Cart
+                </Link>
+                <Link href="/orders" className="od-nav-link active">
+                  My Orders
+                </Link>
+              </>
+            )}
+          </nav>
+        </div>
       </header>
 
-      <section className="order-details-container">
-        {/* Heading */}
-        <div className="order-details-heading">
-          <div>
-            <p className="hero-small">ORDER DETAILS</p>
-            <h1>Order #{order.orderId}</h1>
+      <section className="od-main-container">
+        {/* =========================================================
+            TOP HERO STATUS CARD
+        ========================================================= */}
+        <div className="od-hero-card">
+          <div className="od-hero-header">
+            <div>
+              <p className="od-hero-tag">ORDER RECEIPT &amp; DETAILS</p>
+              <h1 className="od-hero-title">
+                Order #{formattedOrderId}
+                <button
+                  type="button"
+                  onClick={copyOrderId}
+                  className={`od-copy-btn ${copiedId ? "copied" : ""}`}
+                >
+                  {copiedId ? "✓ Copied!" : "📋 Copy ID"}
+                </button>
+              </h1>
+            </div>
+
+            <div className={`od-status-pill ${statusLower}`}>
+              <span className="od-status-dot" />
+              <span>{order.status}</span>
+            </div>
           </div>
 
-          <span className={`order-status ${order.status.toLowerCase()}`}>
-            {order.status}
-          </span>
+          {/* INTERACTIVE TRACKING STEPPER */}
+          <div className="od-stepper">
+            <div className="od-step completed">
+              <div className="od-step-icon">📦</div>
+              <div className="od-step-info">
+                <span className="od-step-title">Order Placed</span>
+                <span className="od-step-sub">
+                  {order.createdAt
+                    ? new Date(order.createdAt).toLocaleDateString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                      })
+                    : "Done"}
+                </span>
+              </div>
+            </div>
+
+            <div className={`od-step ${isConfirmed ? "completed" : "upcoming"}`}>
+              <div className="od-step-icon">
+                {isConfirmed ? "✓" : "2"}
+              </div>
+              <div className="od-step-info">
+                <span className="od-step-title">Confirmed</span>
+                <span className="od-step-sub">Farmer Verified</span>
+              </div>
+            </div>
+
+            <div
+              className={`od-step ${
+                isShipped
+                  ? "completed"
+                  : isConfirmed
+                  ? "current"
+                  : "upcoming"
+              }`}
+            >
+              <div className="od-step-icon">🚜</div>
+              <div className="od-step-info">
+                <span className="od-step-title">Packed &amp; Dispatched</span>
+                <span className="od-step-sub">Fresh from Farm</span>
+              </div>
+            </div>
+
+            <div
+              className={`od-step ${
+                isDelivered
+                  ? "completed"
+                  : isShipped
+                  ? "current"
+                  : "upcoming"
+              }`}
+            >
+              <div className="od-step-icon">🏡</div>
+              <div className="od-step-info">
+                <span className="od-step-title">Delivered</span>
+                <span className="od-step-sub">Direct to Home</span>
+              </div>
+            </div>
+          </div>
+
+          {/* ACTION TOOLBAR */}
+          <div className="od-action-bar">
+            <button
+              type="button"
+              onClick={handleWhatsAppShare}
+              className="od-action-btn whatsapp cursor-pointer"
+            >
+              <span>📱</span> Share on WhatsApp
+            </button>
+
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="od-action-btn cursor-pointer"
+            >
+              <span>🖨️</span> Print Invoice
+            </button>
+
+            {isUpi && (
+              <button
+                type="button"
+                onClick={() => setShowUpiModal(true)}
+                className="od-action-btn cursor-pointer"
+                style={{
+                  background: "#f3e8ff",
+                  borderColor: "#d8b4fe",
+                  color: "#6b21a8",
+                }}
+              >
+                <span>🟣</span> View PhonePe QR
+              </button>
+            )}
+
+            <Link
+              href="/marketplace"
+              className="od-action-btn primary"
+              style={{ marginLeft: "auto" }}
+            >
+              <span>🛍️</span> Continue Shopping
+            </Link>
+          </div>
         </div>
 
-        <div className="order-details-grid">
-          {/* Left Column */}
-          <div className="order-details-left">
-            {/* Customer Info */}
-            <div className="details-card">
-              <h2>👤 Customer Information</h2>
-              <div className="customer-details">
+        {/* =========================================================
+            TWO COLUMN GRID: PRODUCTS & CUSTOMER / SUMMARY
+        ========================================================= */}
+        <div className="od-grid">
+          {/* LEFT COLUMN */}
+          <div>
+            {/* Customer Details Card */}
+            <div className="od-card">
+              <h2 className="od-card-title">
+                <span>👤 Customer &amp; Delivery Information</span>
+                {order.distanceKm > 0 && (
+                  <span className="badge">
+                    📍 ~{order.distanceKm} km from farm
+                  </span>
+                )}
+              </h2>
+
+              <div className="od-customer-grid">
                 {order.customer.name && (
-                  <div>
-                    <span>Name</span>
-                    <strong>{order.customer.name}</strong>
+                  <div className="od-info-item">
+                    <div className="od-info-label">Customer Name</div>
+                    <div className="od-info-val">{order.customer.name}</div>
                   </div>
                 )}
+
                 {order.customer.phone && (
-                  <div>
-                    <span>Mobile</span>
-                    <strong>{order.customer.phone}</strong>
+                  <div className="od-info-item">
+                    <div className="od-info-label">Mobile Number</div>
+                    <div className="od-info-val">📱 {order.customer.phone}</div>
                   </div>
                 )}
-                <div>
-                  <span>Delivery Address</span>
-                  <strong>{order.customer.address}</strong>
+
+                <div className="od-info-item" style={{ gridColumn: "1 / -1" }}>
+                  <div className="od-info-label">Delivery Address</div>
+                  <div className="od-info-val">
+                    📍 {order.customer.address || "Address on file"}
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Products with Feedback Support */}
-            <div className="details-card">
-              <div className="flex items-center justify-between mb-4">
-                <h2 style={{ margin: 0 }}>🥕 Ordered Products</h2>
-                {userRole === "customer" && (
-                  <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full">
-                    ⭐ Feedback Available
-                  </span>
-                )}
-              </div>
+            {/* Ordered Products Card */}
+            <div className="od-card">
+              <h2 className="od-card-title">
+                <span>🛒 Ordered Farm Products</span>
+                <span className="badge">
+                  {order.products.length}{" "}
+                  {order.products.length === 1 ? "Product" : "Products"}
+                </span>
+              </h2>
 
-              <div className="details-products">
+              <div className="od-products-list">
                 {order.products.map((product) => (
-                  <div
-                    className="details-product"
-                    key={product.id}
-                    style={{
-                      flexWrap: "wrap",
-                      gap: "16px",
-                      alignItems: "center",
-                    }}
-                  >
-                    {/* Image */}
-                    <div
-                      className="details-product-image"
-                      style={{
-                        width: "60px",
-                        height: "60px",
-                        borderRadius: "12px",
-                        overflow: "hidden",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        background: "#f0fdf4",
-                      }}
-                    >
+                  <div key={product.id} className="od-product-item">
+                    <div className="od-product-img">
                       {product.image_url ? (
-                        <img
-                          src={product.image_url}
-                          alt={product.name}
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
-                          }}
-                        />
+                        <img src={product.image_url} alt={product.name} />
                       ) : (
-                        <span>🌱</span>
+                        "🌱"
                       )}
                     </div>
 
-                    {/* Info */}
-                    <div className="details-product-info" style={{ flex: 1 }}>
+                    <div className="od-product-main">
                       <Link
                         href={`/products/${product.id}`}
-                        className="hover:text-green-700 transition"
+                        className="od-product-name"
                       >
-                        <h3 style={{ margin: "0 0 4px 0", fontWeight: 700 }}>
-                          {product.name}
-                        </h3>
+                        {product.name}
                       </Link>
-                      <p style={{ margin: 0, color: "#666", fontSize: "13px" }}>
-                        ₹{product.price} / {product.unit}
+                      <p className="od-product-price">
+                        ₹{product.price.toFixed(2)} / {product.unit}
                       </p>
                     </div>
 
-                    {/* Quantity */}
-                    <div>
-                      <span className="details-quantity">Quantity</span>
-                      <strong>
+                    <div className="od-product-qty">
+                      <div className="od-qty-label">Quantity</div>
+                      <div className="od-qty-val">
                         {product.quantity} {product.unit}
-                      </strong>
+                      </div>
                     </div>
 
-                    {/* Total */}
-                    <div className="details-product-total">
-                      ₹{(product.price * product.quantity).toLocaleString("en-IN")}
+                    <div className="od-product-subtotal">
+                      ₹{(product.price * product.quantity).toFixed(2)}
                     </div>
 
-                    {/* Customer Feedback Action Button */}
                     {userRole === "customer" && (
-                      <div style={{ width: "100%", marginTop: "8px" }}>
+                      <div style={{ width: "100%", marginTop: "6px" }}>
                         <button
                           type="button"
                           onClick={() => openFeedbackModal(product)}
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "6px",
-                            padding: "8px 16px",
-                            borderRadius: "10px",
-                            fontSize: "13px",
-                            fontWeight: 700,
-                            cursor: "pointer",
-                            border: "none",
-                            transition: "all 0.2s",
-                            background: product.reviewed ? "#ecfdf5" : "#fef3c7",
-                            color: product.reviewed ? "#047857" : "#b45309",
-                          }}
+                          className={`od-feedback-btn ${
+                            product.reviewed ? "reviewed" : "not-reviewed"
+                          }`}
                         >
                           {product.reviewed ? (
                             <>
                               <span>✓</span> Reviewed (★ {product.userRating}/5)
-                              <span style={{ textDecoration: "underline", marginLeft: "4px" }}>
+                              <span style={{ textDecoration: "underline" }}>
                                 Edit
                               </span>
                             </>
                           ) : (
                             <>
-                              <span>⭐</span> Rate &amp; Give Feedback
+                              <span>⭐</span> Rate &amp; Review Product
                             </>
                           )}
                         </button>
@@ -453,64 +644,276 @@ function OrderDetailsContent() {
             </div>
           </div>
 
-          {/* Right Column / Order Summary */}
-          <aside className="details-summary">
-            <h2>Order Summary</h2>
+          {/* RIGHT COLUMN: SUMMARY */}
+          <div>
+            <aside className="od-summary-card">
+              <h2 className="od-card-title" style={{ marginBottom: "12px" }}>
+                <span>Order Summary</span>
+              </h2>
 
-            <div className="summary-row">
-              <span>Subtotal</span>
-              <strong>₹{order.subtotal.toLocaleString("en-IN")}</strong>
-            </div>
+              <div className="od-summary-row">
+                <span>Products Subtotal</span>
+                <strong>₹{order.subtotal.toFixed(2)}</strong>
+              </div>
 
-            <div className="summary-row">
-              <span>Delivery</span>
-              <strong>₹{order.deliveryCharge}</strong>
-            </div>
+              <div className="od-summary-row">
+                <span>
+                  Delivery Charge{" "}
+                  {order.distanceKm > 0 && (
+                    <small style={{ color: "#64748b" }}>
+                      ({order.distanceKm} km)
+                    </small>
+                  )}
+                </span>
+                <strong style={{ color: "#059669" }}>
+                  ₹{order.deliveryCharge.toFixed(2)}
+                </strong>
+              </div>
 
-            <div className="summary-line" />
+              <div className="od-summary-divider" />
 
-            <div className="summary-total">
-              <span>Total</span>
-              <strong>₹{order.total.toLocaleString("en-IN")}</strong>
-            </div>
+              <div className="od-summary-total">
+                <span>Total Amount</span>
+                <strong>₹{order.total.toFixed(2)}</strong>
+              </div>
 
-            <div className="payment-box">
-              <span>PAYMENT</span>
-              <strong>
-                {order.paymentMethod.toLowerCase().includes("cash") ||
-                order.paymentMethod.toLowerCase() === "cod"
-                  ? "💵 Cash on Delivery"
-                  : "💳 Online Payment"}
-              </strong>
-            </div>
+              {/* PAYMENT BOX */}
+              <div className={`od-payment-box ${isUpi ? "upi" : ""}`}>
+                <div
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 800,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.5px",
+                    color: isUpi ? "#7e22ce" : "#64748b",
+                    marginBottom: "4px",
+                  }}
+                >
+                  Payment Method
+                </div>
+                <div
+                  style={{
+                    fontSize: "15px",
+                    fontWeight: 800,
+                    color: isUpi ? "#581c87" : "#1e293b",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
+                  {isUpi ? (
+                    <>
+                      <span>🟣</span> PhonePe UPI Payment
+                    </>
+                  ) : (
+                    <>
+                      <span>💵</span> Cash on Delivery
+                    </>
+                  )}
+                </div>
 
-            <div className="order-date">
-              Order placed:
-              <strong>
-                {order.createdAt
-                  ? new Date(order.createdAt).toLocaleString("en-IN")
-                  : "-"}
-              </strong>
-            </div>
+                {isUpi && (
+                  <button
+                    type="button"
+                    onClick={() => setShowUpiModal(true)}
+                    style={{
+                      marginTop: "8px",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      color: "#7e22ce",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: 0,
+                      textDecoration: "underline",
+                    }}
+                  >
+                    View Scanned QR Details →
+                  </button>
+                )}
+              </div>
 
-            <Link
-              href={userRole === "farmer" ? "/farmer/orders" : "/orders"}
-              className="back-orders-button"
-            >
-              ← Back to Orders
-            </Link>
-          </aside>
+              <div className="od-order-date">
+                Order Placed On:{" "}
+                <strong>
+                  {order.createdAt
+                    ? new Date(order.createdAt).toLocaleString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : "Recently"}
+                </strong>
+              </div>
+
+              <Link
+                href={userRole === "farmer" ? "/farmer/orders" : "/orders"}
+                className="od-back-btn"
+              >
+                ← Back to All Orders
+              </Link>
+            </aside>
+          </div>
         </div>
       </section>
 
-      {/* FEEDBACK POPUP MODAL */}
+      {/* =========================================================
+          INTERACTIVE PHONEPE QR CODE MODAL
+      ========================================================= */}
+      {showUpiModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.75)",
+            backdropFilter: "blur(6px)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+          onClick={() => setShowUpiModal(false)}
+        >
+          <div
+            style={{
+              background: "#111827",
+              color: "#fff",
+              borderRadius: "28px",
+              maxWidth: "420px",
+              width: "100%",
+              padding: "24px",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+              border: "1px solid rgba(168, 85, 247, 0.4)",
+              textAlign: "center",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "16px",
+              }}
+            >
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "4px 10px",
+                  background: "rgba(168, 85, 247, 0.2)",
+                  borderRadius: "20px",
+                  fontSize: "12px",
+                  fontWeight: 800,
+                  color: "#c084fc",
+                }}
+              >
+                <span>🟣</span> PhonePe QR
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowUpiModal(false)}
+                style={{
+                  background: "#374151",
+                  border: "none",
+                  color: "#fff",
+                  borderRadius: "50%",
+                  width: "32px",
+                  height: "32px",
+                  cursor: "pointer",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div
+              style={{
+                width: "220px",
+                height: "260px",
+                margin: "0 auto 16px",
+                background: "#000",
+                borderRadius: "18px",
+                padding: "8px",
+                border: "2px solid #8b5cf6",
+                boxShadow: "0 0 25px rgba(139, 92, 246, 0.4)",
+              }}
+            >
+              <img
+                src="/images/phonepe-qr.png"
+                alt="PhonePe QR Code - Mahesh Rajendra Borde"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                  borderRadius: "12px",
+                }}
+              />
+            </div>
+
+            <h3 style={{ fontSize: "18px", fontWeight: 800, margin: "0 0 4px" }}>
+              Mahesh Rajendra Borde
+            </h3>
+            <p style={{ color: "#9ca3af", fontSize: "12px", margin: "0 0 16px" }}>
+              Scan &amp; Pay using PhonePe, GPay, or Paytm
+            </p>
+
+            <div
+              style={{
+                background: "rgba(255,255,255,0.06)",
+                padding: "12px",
+                borderRadius: "14px",
+                marginBottom: "16px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <span style={{ fontSize: "12px", color: "#9ca3af" }}>
+                Order Amount
+              </span>
+              <strong style={{ fontSize: "20px", color: "#34d399" }}>
+                ₹{order.total.toFixed(2)}
+              </strong>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText("maheshborde@phonepe");
+                alert("UPI ID maheshborde@phonepe copied to clipboard!");
+              }}
+              style={{
+                width: "100%",
+                padding: "12px",
+                borderRadius: "14px",
+                background: "#8b5cf6",
+                color: "#fff",
+                border: "none",
+                fontWeight: 800,
+                cursor: "pointer",
+              }}
+            >
+              📋 Copy UPI ID: maheshborde@phonepe
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================
+          FEEDBACK POPUP MODAL
+      ========================================================= */}
       {selectedProduct && (
         <div
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0,0,0,0.55)",
-            backdropFilter: "blur(4px)",
+            background: "rgba(0,0,0,0.65)",
+            backdropFilter: "blur(5px)",
             zIndex: 9999,
             display: "flex",
             alignItems: "center",
@@ -521,12 +924,12 @@ function OrderDetailsContent() {
         >
           <div
             style={{
-              background: "#fff",
-              borderRadius: "24px",
-              maxWidth: "500px",
+              background: "#ffffff",
+              borderRadius: "26px",
+              maxWidth: "480px",
               width: "100%",
-              padding: "28px",
-              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+              padding: "30px",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -544,7 +947,7 @@ function OrderDetailsContent() {
                     fontSize: "11px",
                     fontWeight: 800,
                     textTransform: "uppercase",
-                    color: "#166534",
+                    color: "#059669",
                     letterSpacing: "1px",
                   }}
                 >
@@ -555,7 +958,7 @@ function OrderDetailsContent() {
                     fontSize: "20px",
                     fontWeight: 800,
                     margin: "4px 0 0",
-                    color: "#1f2937",
+                    color: "#111827",
                   }}
                 >
                   {selectedProduct.name}
@@ -591,9 +994,9 @@ function OrderDetailsContent() {
                     marginBottom: "8px",
                   }}
                 >
-                  Rating:{" "}
+                  Your Rating:{" "}
                   <strong style={{ color: "#d97706" }}>
-                    {starLabels[hoverRating || rating]}
+                    {hoverRating || rating} / 5 Stars
                   </strong>
                 </label>
 
@@ -640,7 +1043,7 @@ function OrderDetailsContent() {
                 <textarea
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
-                  placeholder="Tell other customers about the taste, quality, freshness, or delivery..."
+                  placeholder="ताजेपणा, गुणवत्ता, चव किंवा डिलिव्हरीचा अनुभव सांगा..."
                   rows={4}
                   style={{
                     width: "100%",
@@ -699,7 +1102,7 @@ function OrderDetailsContent() {
                     padding: "12px",
                     borderRadius: "12px",
                     border: "none",
-                    background: "#16a34a",
+                    background: "#059669",
                     color: "#fff",
                     fontWeight: 800,
                     cursor: submitting ? "wait" : "pointer",
@@ -722,7 +1125,13 @@ function OrderDetailsContent() {
 
 export default function OrderDetailsPage() {
   return (
-    <Suspense fallback={<main className="no-order-details" />}>
+    <Suspense
+      fallback={
+        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          Loading order details...
+        </div>
+      }
+    >
       <OrderDetailsContent />
     </Suspense>
   );
