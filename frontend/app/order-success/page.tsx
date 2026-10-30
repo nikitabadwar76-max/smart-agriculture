@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { API_BASE_URL } from "../../lib/api";
 
 interface OrderItem {
   order_item_id: number;
@@ -135,7 +136,7 @@ function OrderSuccessContent() {
       const token = localStorage.getItem("token");
 
 const response = await fetch(
-  `http://localhost:5000/api/orders/${idToFetch}`,
+  `${API_BASE_URL}/api/orders/${idToFetch}`,
   {
     headers: {
       Authorization: `Bearer ${token}`,

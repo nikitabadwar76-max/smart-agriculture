@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { API_BASE_URL } from "../../../lib/api";
 
 interface OrderProduct {
   name: string;
@@ -119,7 +120,10 @@ export default function FarmerOrdersPage() {
       const storedName = localStorage.getItem("farmer_name");
       if (storedName) setFarmerName(storedName);
 
-      const response = await fetch(`http://localhost:5000/api/orders/farmer/${farmerId}`);
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_BASE_URL}/api/orders/farmer/${farmerId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       if (!response.ok) return;
 
       const data = await response.json();
@@ -185,9 +189,13 @@ export default function FarmerOrdersPage() {
 
     if (rawId) {
       try {
-        await fetch(`http://localhost:5000/api/orders/${rawId}/status`, {
+        const token = localStorage.getItem("token");
+        await fetch(`${API_BASE_URL}/api/orders/${rawId}/status`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify({ order_status: newStatus }),
         });
       } catch (err) {
